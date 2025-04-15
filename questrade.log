@@ -1,0 +1,8 @@
+2025-04-15 08:10:36,403 - core.logger - INFO - Account 27348656: Margin
+2025-04-15 08:10:36,405 - core.logger - INFO - Account 52025997: TFSA
+2025-04-15 08:12:50,517 - core.logger - ERROR - API Error: 400 Client Error: Bad Request for url: https://login.questrade.com/oauth2/token?grant_type=refresh_token&refresh_token=to42tenkB9B7XIhvtbLsHQNLFg7qrMDK0
+2025-04-15 08:15:26,565 - core.logger - ERROR - API Error: 'remainingBalance'
+2025-04-15 08:29:21,036 - core.logger - ERROR - API Error: 400 Client Error: Bad Request for url: https://login.questrade.com/oauth2/token?grant_type=refresh_token&refresh_token=X7Cl5bXht4az9c9SBx1mHeS5cE7xHB6v0
+2025-04-15 08:30:08,050 - core.logger - INFO - Account 27348656: Margin
+2025-04-15 08:30:08,050 - core.logger - INFO - Account 52025997: TFSA
+2025-04-15 08:30:13,327 - core.logger - ERROR - API Error: 400 Client Error: Bad Request for url: https://login.questrade.com/oauth2/token?grant_type=refresh_token&refresh_token=v7C1_iMHIRkfZS_Tl6KK_HAd3xy4HM170
