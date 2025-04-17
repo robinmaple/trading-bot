@@ -1,7 +1,6 @@
 import requests
-import time
 from core.logger import logger
-from config.env import DRY_RUN, RISK_OF_CAPITAL, PROFIT_TO_LOSS_RATIO
+from config.env import DRY_RUN, RISK_OF_CAPITAL, PROFIT_TO_LOSS_RATIO, AVAILABLE_QUANTITY_RATIO
 
 class OrderService:
     def __init__(self, auth_client):
@@ -19,17 +18,16 @@ class OrderService:
                 "timeInForce": "Day",
                 "action": action
             }
-            
+
             response = requests.post(url, json=data, headers=headers, timeout=10)
-            
-            # Get detailed error message
+
             if response.status_code != 200:
                 error_detail = response.json().get('message', 'No error details')
                 logger.error(f"Order failed ({response.status_code}): {error_detail}")
-            
+
             response.raise_for_status()
             return response.json()
-            
+
         except Exception as e:
             logger.error(f"Order placement crashed: {str(e)}")
             raise
@@ -37,56 +35,77 @@ class OrderService:
 class BracketOrder:
     def __init__(self, order_service, price_service):
         self.order_service = order_service
-        self.price_service = price_service  # New: to monitor prices
+        self.price_service = price_service
 
-    def place(self, symbol, entry_price, stop_loss_price, account_id, quantity=None):
-        risk_per_share = entry_price - stop_loss_price
+    def place(self, symbol, symbol_id, entry_price, stop_price, account_id, buying_power, direction="Buy", quantity=None):
+        if direction not in ["Buy", "Sell"]:
+            raise ValueError("direction must be 'Buy' or 'Sell'")
+
+        risk_per_share = abs(entry_price - stop_price)
+        if risk_per_share == 0:
+            raise ValueError("Risk per share is zero!")
+
+        max_risk_capital = RISK_OF_CAPITAL * buying_power
+        computed_qty = int(max_risk_capital / risk_per_share)
+
+        # Apply threshold logic
+        min_required_qty = int(AVAILABLE_QUANTITY_RATIO * buying_power / entry_price)
+
         if quantity is None:
-            quantity = int(RISK_OF_CAPITAL / risk_per_share)
-            if quantity < 1:
-                raise ValueError("Quantity < 1. Adjust risk.")
+            quantity = computed_qty
 
-        take_profit_price = entry_price + (entry_price - stop_loss_price) * PROFIT_TO_LOSS_RATIO
-        logger.info(f"[Bracket Order] {symbol}: Entry={entry_price}, SL={stop_loss_price}, TP={take_profit_price}, Qty={quantity}, DryRun={DRY_RUN}")
+        if quantity < 1 or quantity < min_required_qty:
+            logger.warn(f"Quantity too low for {symbol}: {quantity} < {min_required_qty}")
+            return None
+
+        take_profit_price = (
+            entry_price + risk_per_share * PROFIT_TO_LOSS_RATIO
+            if direction == "Buy"
+            else entry_price - risk_per_share * PROFIT_TO_LOSS_RATIO
+        )
+
+        logger.info(f"[Bracket Order] {symbol}: {direction} Entry={entry_price}, SL={stop_price}, TP={take_profit_price}, Qty={quantity}, DryRun={DRY_RUN}")
 
         if DRY_RUN:
-            logger.info(f"DRY RUN: Simulating entry order for {symbol} at {entry_price}")
-            position_entered = self.simulate_entry_fill(symbol, entry_price)
+            logger.info(f"DRY RUN: Simulating {direction} order for {symbol} at {entry_price}")
+            position_entered = self.simulate_entry_fill(symbol, entry_price, direction)
             if position_entered:
-                logger.info(f"DRY RUN: Entered position. Watching for exit...")
-                self.simulate_exit_logic(symbol, stop_loss_price, take_profit_price)
+                logger.info("DRY RUN: Position filled. Watching for exit trigger...")
+                self.simulate_exit_logic(symbol, stop_price, take_profit_price, direction)
             return
 
-        # Actual order placement: Entry first
-        entry_response = self.order_service.place_limit_order(
-            symbol=symbol,
-            price=entry_price,
-            quantity=quantity,
+        return self.order_service.place_limit_order(
             account_id=account_id,
-            action="Buy"
+            symbol_id=symbol_id,
+            limit_price=entry_price,
+            quantity=quantity,
+            action=direction
         )
-        # Later enhancement: poll until filled, then send stop-loss and take-profit orders
-        return entry_response
 
-    def simulate_entry_fill(self, symbol, entry_price):
-        # For dry run, just assume immediate fill (real version polls quote API)
+    def simulate_entry_fill(self, symbol, entry_price, direction):
         market_price = self.price_service.get_price(symbol)
-        return market_price <= entry_price
+        return market_price <= entry_price if direction == "Buy" else market_price >= entry_price
 
-    def simulate_exit_logic(self, symbol, stop_loss_price, take_profit_price):
+    def simulate_exit_logic(self, symbol, stop_loss_price, take_profit_price, direction):
         while True:
             price = self.price_service.get_price(symbol)
             logger.info(f"Watching {symbol} | Current: {price} | TP: {take_profit_price} | SL: {stop_loss_price}")
-
-            if price >= take_profit_price:
-                logger.info(f"DRY RUN: TAKE PROFIT triggered at {price}")
-                break
-            elif price <= stop_loss_price:
-                logger.info(f"DRY RUN: STOP LOSS triggered at {price}")
-                break
+            if direction == "Buy":
+                if price >= take_profit_price:
+                    logger.info(f"DRY RUN: TAKE PROFIT hit at {price}")
+                    break
+                elif price <= stop_loss_price:
+                    logger.info(f"DRY RUN: STOP LOSS hit at {price}")
+                    break
+            else:  # Sell
+                if price <= take_profit_price:
+                    logger.info(f"DRY RUN: TAKE PROFIT hit at {price}")
+                    break
+                elif price >= stop_loss_price:
+                    logger.info(f"DRY RUN: STOP LOSS hit at {price}")
+                    break
 
 class MockPriceService:
     def get_price(self, symbol):
         import random
-        # Simulate price movement around 169~171
         return round(169 + random.uniform(-1, 1), 2)
