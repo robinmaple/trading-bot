@@ -6,13 +6,22 @@ from pathlib import Path
 from config.settings import QUESTRADE_TOKEN_URL, BASE_DIR
 
 class QuestradeAuth:
-    def __init__(self, refresh_token):
+    def __init__(self, refresh_token=None):
+        self.lock = Lock()
+        self.token_file = BASE_DIR / 'tokens.json'
+
+        # Load from file if not passed
+        if not refresh_token and self.token_file.exists():
+            with open(self.token_file) as f:
+                refresh_token = json.load(f).get('refresh_token')
+
+        if not refresh_token:
+            raise ValueError("A refresh_token must be provided either via argument or tokens.json")
+
         self.refresh_token = refresh_token
         self.access_token = None
         self.api_server = None
         self.expiry_time = 0
-        self.lock = Lock()
-        self.token_file = BASE_DIR / 'tokens.json'
 
     def _refresh_tokens(self):
         with self.lock:
