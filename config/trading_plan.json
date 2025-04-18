@@ -1,0 +1,21 @@
+[
+    {
+      "symbol": "AAPL",
+      "side": "Buy",
+      "entry": 168.50,
+      "stop": 166.00
+    },
+    {
+        "symbol": "TSLA",
+        "side": "Buy",
+        "entry": 230.50,
+        "stop": 229.59
+    },
+    {
+        "symbol": "MSFT",
+        "side": "Sell",
+        "entry": 375.50,
+        "stop": 381.50
+    }
+    ]
+  

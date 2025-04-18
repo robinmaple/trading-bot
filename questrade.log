@@ -1,15 +1,19 @@
-2025-04-17 04:53:39,104 - core.logger - INFO - DRY_RUN = True
-2025-04-17 04:53:39,930 - core.logger - INFO - === TESTING BUY BRACKET ORDER ===
-2025-04-17 04:53:39,932 - core.logger - INFO - [Bracket Order] AAPL: Buy Entry=170.0, SL=168.5, TP=173.0, Qty=6666, DryRun=True
-2025-04-17 04:53:39,932 - core.logger - INFO - DRY RUN: Simulating Buy order for AAPL at 170.0
-2025-04-17 04:53:39,932 - core.logger - INFO - DRY RUN: Position filled. Watching for exit trigger...
-2025-04-17 04:53:39,932 - core.logger - INFO - Watching AAPL | Current: 169.24 | TP: 173.0 | SL: 168.5
-2025-04-17 04:53:39,932 - core.logger - INFO - Watching AAPL | Current: 169.17 | TP: 173.0 | SL: 168.5
-2025-04-17 04:53:39,932 - core.logger - INFO - Watching AAPL | Current: 169.66 | TP: 173.0 | SL: 168.5
-2025-04-17 04:53:39,932 - core.logger - INFO - Watching AAPL | Current: 169.44 | TP: 173.0 | SL: 168.5
-2025-04-17 04:53:39,932 - core.logger - INFO - Watching AAPL | Current: 168.17 | TP: 173.0 | SL: 168.5
-2025-04-17 04:53:39,932 - core.logger - INFO - DRY RUN: STOP LOSS hit at 168.17
-2025-04-17 04:53:39,943 - core.logger - INFO - 
-=== TESTING SELL BRACKET ORDER ===
-2025-04-17 04:53:39,946 - core.logger - INFO - [Bracket Order] AAPL: Sell Entry=170.0, SL=171.5, TP=167.0, Qty=6666, DryRun=True
-2025-04-17 04:53:39,946 - core.logger - INFO - DRY RUN: Simulating Sell order for AAPL at 170.0
+2025-04-17 06:09:42,038 - core.logger - INFO - Starting daily_trade | DryRun=True
+2025-04-17 06:09:42,038 - core.logger - INFO - Loaded trading plan:
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'AAPL', 'side': 'Buy', 'entry': 168.5, 'stop': 166.0, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'TSLA', 'side': 'Buy', 'entry': 230.5, 'stop': 229.59, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'MSFT', 'side': 'Sell', 'entry': 375.5, 'stop': 381.5, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,038 - core.logger - INFO - Triggering order for AAPL
+2025-04-17 06:09:42,038 - core.logger - INFO - [Bracket Order] AAPL: Buy Entry=168.5, SL=166.0, TP=173.5, Qty=4000, DryRun=True
+2025-04-17 06:09:42,038 - core.logger - INFO - DRY RUN: Simulating Buy entry for AAPL at 168.5
+2025-04-17 06:09:42,038 - core.logger - INFO - Checking simulated fill for AAPL: Market=168.81 | Entry=168.5
+2025-04-17 06:09:42,038 - core.logger - INFO - Updated Trading Plan Status After Position Entry:
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'AAPL', 'side': 'Buy', 'entry': 168.5, 'stop': 166.0, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'expired'}
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'TSLA', 'side': 'Buy', 'entry': 230.5, 'stop': 229.59, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,038 - core.logger - INFO - {'symbol': 'MSFT', 'side': 'Sell', 'entry': 375.5, 'stop': 381.5, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,038 - core.logger - INFO - [SIMULATION] Watching AAPL: Entry=168.5, SL=166.0, TP=173.5
+2025-04-17 06:09:42,038 - core.logger - INFO - [SIMULATION] Exit triggered for AAPL at 166.0
+2025-04-17 06:09:42,038 - core.logger - INFO - Updated Trading Plan After Exit:
+2025-04-17 06:09:42,046 - core.logger - INFO - {'symbol': 'AAPL', 'side': 'Buy', 'entry': 168.5, 'stop': 166.0, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'expired'}
+2025-04-17 06:09:42,046 - core.logger - INFO - {'symbol': 'TSLA', 'side': 'Buy', 'entry': 230.5, 'stop': 229.59, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
+2025-04-17 06:09:42,046 - core.logger - INFO - {'symbol': 'MSFT', 'side': 'Sell', 'entry': 375.5, 'stop': 381.5, 'profit_to_loss_ratio': 2.0, 'risk_of_capital': 1.0, 'available_quantity_ratio': 0.5, 'status': 'active'}
