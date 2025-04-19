@@ -32,3 +32,134 @@
 2025-04-19 11:12:41,940 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
 2025-04-19 11:12:42,306 - core.logger - INFO - Starting trading manager
 2025-04-19 11:12:42,340 - core.logger - ERROR - Fatal error in trading session: '<=' not supported between instances of 'coroutine' and 'float'
+2025-04-19 11:17:36,934 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 11:17:36,982 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 11:17:36,982 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:17:37,330 - core.logger - INFO - Starting trading manager
+2025-04-19 11:27:35,958 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 11:27:36,051 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 11:27:36,052 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:27:36,427 - core.logger - INFO - Starting trading manager
+2025-04-19 11:27:37,036 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:37,413 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:37,798 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:38,228 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:38,604 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:38,810 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:39,085 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:39,292 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:39,529 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:39,803 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:39,993 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:27:40,004 - core.logger - ERROR - Fatal error in trading session: '<=' not supported between instances of 'NoneType' and 'float'
+2025-04-19 11:28:05,467 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 11:28:05,554 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 11:28:05,555 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:28:05,856 - core.logger - INFO - Starting trading manager
+2025-04-19 11:28:06,155 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:06,359 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:06,560 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:06,790 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:07,008 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:07,203 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:07,411 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:07,645 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:07,900 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:08,123 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:08,344 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:28:08,346 - core.logger - ERROR - Fatal error in trading session: '<=' not supported between instances of 'NoneType' and 'float'
+2025-04-19 11:40:04,495 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 11:40:04,584 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 11:40:04,584 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:40:05,019 - core.logger - INFO - Starting trading manager
+2025-04-19 11:40:05,599 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:05,984 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:06,381 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:06,607 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:07,051 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:07,413 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:07,635 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:07,868 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,083 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,305 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,535 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,546 - core.logger - WARNING - Price not available for AAPL, skipping order.
+2025-04-19 11:40:08,753 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,770 - core.logger - WARNING - Price not available for TSLA, skipping order.
+2025-04-19 11:40:08,984 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:08,984 - core.logger - WARNING - Price not available for MSFT, skipping order.
+2025-04-19 11:40:09,217 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:09,219 - core.logger - WARNING - Price not available for PLTR, skipping order.
+2025-04-19 11:40:09,436 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:09,444 - core.logger - WARNING - Price not available for GOOGL, skipping order.
+2025-04-19 11:40:09,668 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:09,668 - core.logger - WARNING - Price not available for EUR/USD, skipping order.
+2025-04-19 11:40:09,887 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:09,890 - core.logger - WARNING - Price not available for USD/JPY, skipping order.
+2025-04-19 11:40:10,112 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:10,115 - core.logger - WARNING - Price not available for GBP/USD, skipping order.
+2025-04-19 11:40:10,330 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:10,332 - core.logger - WARNING - Price not available for AUD/USD, skipping order.
+2025-04-19 11:40:10,552 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:10,555 - core.logger - WARNING - Price not available for USD/CAD, skipping order.
+2025-04-19 11:40:15,779 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:16,015 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:16,229 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:16,454 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:16,668 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:16,886 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,084 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,312 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,523 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,738 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,962 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:17,966 - core.logger - WARNING - Price not available for AAPL, skipping order.
+2025-04-19 11:40:18,183 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:18,191 - core.logger - WARNING - Price not available for TSLA, skipping order.
+2025-04-19 11:40:18,399 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:18,407 - core.logger - WARNING - Price not available for MSFT, skipping order.
+2025-04-19 11:40:18,617 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:18,617 - core.logger - WARNING - Price not available for PLTR, skipping order.
+2025-04-19 11:40:18,849 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:18,853 - core.logger - WARNING - Price not available for GOOGL, skipping order.
+2025-04-19 11:40:19,066 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:19,079 - core.logger - WARNING - Price not available for EUR/USD, skipping order.
+2025-04-19 11:40:19,271 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:19,275 - core.logger - WARNING - Price not available for USD/JPY, skipping order.
+2025-04-19 11:40:19,483 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:19,499 - core.logger - WARNING - Price not available for GBP/USD, skipping order.
+2025-04-19 11:40:19,724 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:19,724 - core.logger - WARNING - Price not available for AUD/USD, skipping order.
+2025-04-19 11:40:19,954 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:19,954 - core.logger - WARNING - Price not available for USD/CAD, skipping order.
+2025-04-19 11:40:25,176 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:25,384 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:25,616 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:25,839 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:26,065 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:26,323 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:26,525 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:26,741 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:26,990 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:27,251 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:27,437 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:27,437 - core.logger - WARNING - Price not available for AAPL, skipping order.
+2025-04-19 11:40:27,637 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:27,637 - core.logger - WARNING - Price not available for TSLA, skipping order.
+2025-04-19 11:40:27,873 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=MSFT&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:27,873 - core.logger - WARNING - Price not available for MSFT, skipping order.
+2025-04-19 11:40:28,074 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=PLTR&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:28,075 - core.logger - WARNING - Price not available for PLTR, skipping order.
+2025-04-19 11:40:28,261 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GOOGL&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:28,263 - core.logger - WARNING - Price not available for GOOGL, skipping order.
+2025-04-19 11:40:28,454 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=EUR%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:28,463 - core.logger - WARNING - Price not available for EUR/USD, skipping order.
+2025-04-19 11:40:28,670 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FJPY&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:28,682 - core.logger - WARNING - Price not available for USD/JPY, skipping order.
+2025-04-19 11:40:28,900 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=GBP%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:28,902 - core.logger - WARNING - Price not available for GBP/USD, skipping order.
+2025-04-19 11:40:29,101 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AUD%2FUSD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:29,111 - core.logger - WARNING - Price not available for AUD/USD, skipping order.
+2025-04-19 11:40:29,368 - httpx - INFO - HTTP Request: GET https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=USD%2FCAD&apikey= "HTTP/1.1 200 OK"
+2025-04-19 11:40:29,373 - core.logger - WARNING - Price not available for USD/CAD, skipping order.
+2025-04-19 11:40:34,225 - core.logger - INFO - Gracefully shutting down...

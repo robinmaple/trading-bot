@@ -2,8 +2,9 @@ from core.auth import QuestradeAuth
 from core.trading_manager import TradingManager
 from config.env import DRY_RUN
 from core.logger import logger
+import asyncio
 
-def trade_simulation():
+async def trade_simulation():
     logger.info(f"Starting trading session | DryRun={DRY_RUN}")
     
     # Initialize trading manager with auth
@@ -12,7 +13,7 @@ def trade_simulation():
     
     try:
         # Run the main trading loop
-        manager.run()
+        await manager.run()
     except KeyboardInterrupt:
         logger.info("Gracefully shutting down...")
     except Exception as e:
@@ -20,4 +21,4 @@ def trade_simulation():
         raise
 
 if __name__ == "__main__":
-    trade_simulation()
+    asyncio.run(trade_simulation())

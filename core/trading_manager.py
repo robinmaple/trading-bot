@@ -41,7 +41,7 @@ class TradingManager:
         self.close_trades_buffer = CLOSE_TRADES_BUFFER_MINUTES
         self.loss_tracker.limit_percent = float(DAILY_LOSS_LIMIT_PERCENT)
     
-    def run(self):
+    async def run(self):
         """Main trading loop"""
         logger.info("Starting trading manager")
         
@@ -50,8 +50,8 @@ class TradingManager:
                 time.sleep(60)  # Wait 1 minute before rechecking
                 continue
                 
-            self._monitor_prices()
-            self._execute_orders()
+            await self._monitor_prices()
+            await self._execute_orders()
             self._manage_positions()
             
             time.sleep(5)  # Throttle API calls
@@ -96,19 +96,23 @@ class TradingManager:
             self.logger.info(msg)
         return callback
 
-    def _execute_orders(self):
+    async def _execute_orders(self):
         """Process all triggerable orders"""
         account_value = self._get_account_value()
         
         for order in self.plan_manager.get_active_orders():
-            symbol = order['symbol']
-            if self._should_trigger_order(order, account_value):
-                self._place_bracket_order(order)
+            if await self._should_trigger_order(order, account_value):
+                await self._place_bracket_order(order)
     
     async def _should_trigger_order(self, order, account_value) -> bool:
         """Check order triggering conditions"""
         # Add your custom entry logic here
         current_price = await self.price_service.get_price(order['symbol'])
+
+        if current_price is None:
+                logger.warning(f"Price not available for {order['symbol']}, skipping order.")
+                return False  # or raise depending on strategy
+
         if order['side'] == 'Buy':
             return current_price <= order['entry']
         else:
