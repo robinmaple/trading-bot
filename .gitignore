@@ -1,13 +1,19 @@
+# Environment files
 .env
+
+# Log files
 questrade.log
+
+# Sensitive data
 tokens.json
 trading_plan.json
 
-"files.exclude": {
-    "**/__pycache__": true,
-    "**/*.pyc": true
-},
-"search.exclude": {
-    "**/__pycache__": true,
-    "**/*.pyc": true
-}
+# Python bytecode and cache files
+*.py[cod]
+__pycache__/
+*.so
+*.pyd
+
+# Virtual environments (add if needed)
+venv/
+env/
