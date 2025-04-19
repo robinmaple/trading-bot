@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional
 from core.logger import logger
 from core.trading_plan import TradingPlanManager
-from core.api.orders import OrderService, BracketOrder, MockPriceService
+from core.api.orders import OrderService, BracketOrder
 from core.utils.trading_hours import TradingHours
 from core.risk.daily_loss_tracker import DailyLossTracker
+from core.price_services.multiprovider_service import MultiProviderPriceService
 
 class TradingManager:
     def __init__(self, auth_client):
@@ -19,7 +20,8 @@ class TradingManager:
     def _init_services(self):
         """Initialize all required services"""
         self.order_service = OrderService(self.auth)
-        self.price_service = MockPriceService()  # Replace with real service
+        self.price_service = self.price_service = MultiProviderPriceService()
+
         self.bracket_order = BracketOrder(self.order_service, self.price_service)
         self.plan_manager = TradingPlanManager()
     
@@ -85,6 +87,14 @@ class TradingManager:
             logger.debug(f"{symbol} price: {current_price}")
             # Add price alert logic here
     
+    def make_status_callback(self):
+        def callback(event_type, symbol, details=None):
+            msg = f"[Order Event] {event_type.upper()} - {symbol}"
+            if details:
+                msg += f" | Details: {details}"
+            self.logger.info(msg)
+        return callback
+
     def _execute_orders(self):
         """Process all triggerable orders"""
         account_value = self._get_account_value()
@@ -106,24 +116,36 @@ class TradingManager:
     def _place_bracket_order(self, order):
         """Execute bracket order with risk management"""
         try:
-            result = self.bracket_order.place(
+            # Build the BracketOrder object
+            bracket_order = BracketOrder(
                 symbol=order['symbol'],
                 symbol_id=order.get('symbol_id'),
                 entry_price=order['entry'],
                 stop_price=order['stop'],
                 account_id=self.account_id,
-                buying_power=self._get_account_value(),
                 direction=order['side'],
                 quantity=order.get('quantity'),
                 entry_type=order.get('entry_type', 'limit'),
                 entry_stop_trigger=order.get('entry_stop_trigger')
             )
+            # Optional: Attach status callback
+            status_callback = self.make_status_callback(order['symbol'], bracket_order)
+
+            # Place the order
+            result = bracket_order.place_with_config(
+                current_price=self.price_service.get_price(order['symbol']),
+                price_service=self.price_service,
+                status_callback=status_callback
+            )
+
+            # Post-placement actions
             if result:
                 self.plan_manager.mark_expired(order['symbol'])
                 self.active_positions[order['symbol']] = order
+
         except Exception as e:
             logger.error(f"Order failed for {order['symbol']}: {str(e)}")
-    
+        
     def _manage_positions(self):
         """Monitor and manage open positions"""
         for symbol, position in list(self.active_positions.items()):
@@ -146,3 +168,15 @@ class TradingManager:
         """Get current account equity"""
         # Replace with real account balance check
         return 10000  # Mock value
+    
+    def make_status_callback(self, plan_name: str, bracket_order: BracketOrder):
+        def callback(status: str, symbol: str, data: dict):
+            log_data = {
+                "plan": plan_name,
+                "symbol": symbol,
+                "status": status,
+                "data": data,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            logger.info(f"Order status update: {json.dumps(log_data)}")
+        return callback

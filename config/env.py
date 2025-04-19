@@ -1,5 +1,4 @@
 import os
-
 from typing import List, Tuple
 
 def _parse_trading_hours(hours_str: str) -> List[Tuple[str, str]]:
@@ -20,7 +19,7 @@ def _parse_trading_hours(hours_str: str) -> List[Tuple[str, str]]:
     return ranges
 
 # Core Trading Parameters
-DRY_RUN = os.getenv("DRY_RUN", "True").lower() == "true"
+DRY_RUN = os.getenv("DRY_RUN", "TRUE").lower() == "true"
 ACCOUNT_ID = os.getenv("ACCOUNT_ID", "27348656")
 
 # Risk Management
@@ -33,6 +32,16 @@ DAILY_LOSS_LIMIT_PERCENT = float(os.getenv("DAILY_LOSS_LIMIT_PERCENT", "2.0"))
 CLOSE_POSITIONS_BEFORE_CLOSE = os.getenv("CLOSE_POSITIONS_BEFORE_CLOSE", "Yes").lower() == "yes"
 CLOSE_TRADES_BUFFER_MINUTES = int(os.getenv("CLOSE_TRADES_BUFFER_MINUTES", "5"))
 TRADING_HOURS = _parse_trading_hours(os.getenv("TRADING_HOURS", "9:30-16:00"))
+
+# API URLs and Keys for Price Services
+ALPHA_VANTAGE_API_URL = os.getenv("ALPHA_VANTAGE_API_URL", "https://www.alphavantage.co/query")
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
+
+FINNHUB_API_URL = os.getenv("FINNHUB_API_URL", "https://finnhub.io/api/v1")
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
+
+LOG_DIR = os.getenv("LOG_DIR", "logs\executed_orders")
+LOG_FILE = os.getenv("LOG_FILE", "trading_log.txt")
 
 # Validation
 assert 0 < RISK_OF_CAPITAL <= 1, "RISK_OF_CAPITAL must be between 0 and 1"

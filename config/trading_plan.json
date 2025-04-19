@@ -1,25 +1,61 @@
 [
-    {
-      "symbol": "AAPL",
-      "side": "Buy",
-      "entry": 168.50,
-      "stop": 166.00,
-      "entry_type": "limit"
-    },
-    {
-      "symbol": "TSLA",
-      "side": "Buy",
-      "entry": 230.50,
-      "stop": 229.59,
-      "entry_type": "stop_limit",
-      "entry_stop_trigger": 230.40
-    },
-    {
-      "symbol": "MSFT",
-      "side": "Sell",
-      "entry": 375.50,
-      "stop": 381.50,
-      "entry_type": "limit"
-    }
-  ]
-  
+  {
+    "plan": "Earnings Momentum Breakout",
+    "symbol": "AAPL",
+    "side": "Buy",
+    "entry": 168.50,
+    "stop": 166.00,
+    "entry_type": "limit",
+    "quantity": 10,
+    "symbol_id": "123456789",
+    "note": "Apple technical breakout",
+    "tags": ["breakout", "tech"]
+  },
+  {
+    "plan": "EV Momentum Catch",
+    "symbol": "TSLA",
+    "side": "Buy",
+    "entry": 230.50,
+    "stop": 229.59,
+    "entry_type": "stop_limit",
+    "entry_stop_trigger": 230.40,
+    "quantity": 5,
+    "symbol_id": "987654321",
+    "note": "Stop-limit catch on reversal",
+    "tags": ["ev", "watchlist"]
+  },
+  {
+    "plan": "Software Fade Short",
+    "symbol": "MSFT",
+    "side": "Sell",
+    "entry": 375.50,
+    "stop": 381.50,
+    "entry_type": "limit",
+    "quantity": 8,
+    "note": "Short near resistance",
+    "tags": ["fade", "software"]
+  },
+  {
+    "plan": "Low Cap Volatility Snipe",
+    "symbol": "PLTR",
+    "side": "Buy",
+    "entry": 23.50,
+    "stop": 22.80,
+    "entry_type": "limit",
+    "quantity": 15,
+    "note": "Volatility-based entry on pullback",
+    "tags": ["smallcap", "volatility"]
+  },
+  {
+    "plan": "MegaCap Rejection Short",
+    "symbol": "GOOGL",
+    "side": "Sell",
+    "entry": 158.30,
+    "stop": 160.50,
+    "entry_type": "stop_limit",
+    "entry_stop_trigger": 158.10,
+    "quantity": 7,
+    "note": "Breakdown through key support",
+    "tags": ["short", "megacap"]
+  }
+]
