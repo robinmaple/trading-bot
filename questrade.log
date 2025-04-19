@@ -9,3 +9,6 @@
 2025-04-18 06:13:36,307 - core.logger - INFO - Outside trading hours
 2025-04-18 06:14:36,325 - core.logger - INFO - Outside trading hours
 2025-04-18 06:15:39,715 - core.logger - INFO - Gracefully shutting down...
+2025-04-19 07:26:39,921 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 07:26:46,852 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 07:26:46,853 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]

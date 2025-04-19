@@ -6,7 +6,7 @@ questrade.log
 
 # Sensitive data
 tokens.json
-trading_plan.json
+config/trading_plan.json
 
 # Python bytecode and cache files
 *.py[cod]

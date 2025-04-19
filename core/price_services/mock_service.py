@@ -3,9 +3,9 @@ from core.logger import logger
 from config.env import PROFIT_TO_LOSS_RATIO
 from core.api.orders import BracketOrder
 from typing import Dict
-from .price_service import BasePriceService
+from .price_service import PriceService
 
-class MockPriceService(BasePriceService):
+class MockPriceService(PriceService):
     def get_price(self, symbol: str) -> float:
         return round(169 + random.uniform(-1, 1), 2)
 

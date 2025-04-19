@@ -57,5 +57,65 @@
     "quantity": 7,
     "note": "Breakdown through key support",
     "tags": ["short", "megacap"]
-  }
-]
+  },
+  {
+      "plan": "EURUSD Breakout Long",
+      "symbol": "EUR/USD",
+      "side": "Buy",
+      "entry": 1.0860,
+      "stop": 1.0820,
+      "entry_type": "limit",
+      "quantity": 1000,
+      "note": "Anticipating euro breakout vs USD",
+      "tags": ["forex", "breakout", "long"]
+    },
+    {
+      "plan": "USDJPY Reversal Short",
+      "symbol": "USD/JPY",
+      "side": "Sell",
+      "entry": 153.20,
+      "stop": 154.10,
+      "entry_type": "stop_limit",
+      "entry_stop_trigger": 153.30,
+      "quantity": 1000,
+      "note": "Yen recovery after rate news",
+      "tags": ["forex", "reversal", "short"]
+    },
+    {
+      "plan": "GBPUSD Range Fade",
+      "symbol": "GBP/USD",
+      "side": "Sell",
+      "entry": 1.2535,
+      "stop": 1.2580,
+      "entry_type": "limit",
+      "quantity": 1000,
+      "note": "Short at range top resistance",
+      "tags": ["forex", "fade", "sell"]
+    },
+    {
+      "plan": "AUDUSD Breakout Long",
+      "symbol": "AUD/USD",
+      "side": "Buy",
+      "entry": 0.6455,
+      "stop": 0.6420,
+      "entry_type": "stop_limit",
+      "entry_stop_trigger": 0.6445,
+      "quantity": 1500,
+      "note": "Risk-on sentiment return",
+      "tags": ["forex", "breakout", "buy"]
+    },
+    {
+      "plan": "USDCAD Trend Follow",
+      "symbol": "USD/CAD",
+      "side": "Buy",
+      "entry": 1.3755,
+      "stop": 1.3700,
+      "entry_type": "limit",
+      "quantity": 1200,
+      "note": "Strong dollar continuation",
+      "tags": ["forex", "trend", "buy"]
+    }
+  ]
+    
+
+

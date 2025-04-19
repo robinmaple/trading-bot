@@ -1,15 +1,15 @@
 from core.logger import logger
 from .mock_service import MockPriceService
-from .alphavantage_service import AlphaVantageService
-from core.price_services.finnhub_service import FinnhubService
+from .alphavantage_service import AlphaVantagePriceService
+from core.price_services.finnhub_service import FinnhubPriceService
 from core.price_services.price_service import PriceService
 # Add additional imports here as needed
 
-class MultiProviderService(PriceService):
+class MultiProviderPriceService(PriceService):
     def __init__(self):
         self.providers = [
-            AlphaVantageService(),
-            FinnhubService(),
+            AlphaVantagePriceService(),
+            FinnhubPriceService(),
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     (),  # fallback
         ]
 

@@ -4,11 +4,11 @@ import time
 from typing import Optional
 
 from core.price_services.price_service import PriceService
-from core.price_services.alphavantage_service import AlphaVantageService
-from core.price_services.finnhub_service import FinnhubService
+from core.price_services.alphavantage_service import AlphaVantagePriceService
+from core.price_services.finnhub_service import FinnhubPriceService
 
 class CompositePriceService(PriceService):
-    def __init__(self, alpha_service: AlphaVantageService, finnhub_service: FinnhubService):
+    def __init__(self, alpha_service: AlphaVantagePriceService, finnhub_service: FinnhubPriceService):
         self.alpha = alpha_service
         self.finnhub = finnhub_service
 
