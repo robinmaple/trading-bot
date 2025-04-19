@@ -3,19 +3,23 @@
       "symbol": "AAPL",
       "side": "Buy",
       "entry": 168.50,
-      "stop": 166.00
+      "stop": 166.00,
+      "entry_type": "limit"
     },
     {
-        "symbol": "TSLA",
-        "side": "Buy",
-        "entry": 230.50,
-        "stop": 229.59
+      "symbol": "TSLA",
+      "side": "Buy",
+      "entry": 230.50,
+      "stop": 229.59,
+      "entry_type": "stop_limit",
+      "entry_stop_trigger": 230.40
     },
     {
-        "symbol": "MSFT",
-        "side": "Sell",
-        "entry": 375.50,
-        "stop": 381.50
+      "symbol": "MSFT",
+      "side": "Sell",
+      "entry": 375.50,
+      "stop": 381.50,
+      "entry_type": "limit"
     }
-    ]
+  ]
   

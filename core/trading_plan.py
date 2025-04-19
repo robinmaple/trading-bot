@@ -28,15 +28,23 @@ class TradingPlanManager:
         if side not in ["Buy", "Sell"]:
             raise ValueError(f"Side must be 'Buy' or 'Sell': {raw}")
 
+        entry_type = raw.get("entry_type", "limit").lower()
+        if entry_type not in ["limit", "stop_limit"]:
+            raise ValueError(f"Invalid entry_type: {entry_type}")
+
+        entry_stop_trigger = raw.get("entry_stop_trigger")
+
         return {
             "symbol": raw["symbol"],
             "side": side,
             "entry": float(raw["entry"]),
             "stop": float(raw["stop"]),
+            "entry_type": entry_type,
+            "entry_stop_trigger": float(entry_stop_trigger) if entry_stop_trigger else None,
             "profit_to_loss_ratio": float(raw.get("profit_to_loss_ratio", DEFAULT_PROFIT_TO_LOSS_RATIO)),
             "risk_of_capital": float(raw.get("risk_of_capital", DEFAULT_RISK_OF_CAPITAL)),
             "available_quantity_ratio": float(raw.get("available_quantity_ratio", DEFAULT_AVAILABLE_QUANTITY_RATIO)),
-            "status": "active"  # Can be active, in_position, inactive, expired
+            "status": "active"
         }
 
     def get_active_orders(self):
