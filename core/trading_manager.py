@@ -24,7 +24,6 @@ class TradingManager:
         self.order_service = OrderService(self.auth)
         self.price_service = self.price_service = MultiProviderPriceService()
 
-        self.bracket_order = BracketOrder(self.order_service, self.price_service)
         self.plan_manager = TradingPlanManager()
     
     def _load_config(self):
@@ -81,11 +80,11 @@ class TradingManager:
             (session_end - datetime.now()) < timedelta(minutes=self.close_trades_buffer)
         )
     
-    def _monitor_prices(self):
+    async def _monitor_prices(self):
         """Monitor all tickers in trading plan"""
         for order in self.plan_manager.get_active_orders():
             symbol = order['symbol']
-            current_price = self.price_service.get_price(symbol)
+            current_price = await self.price_service.get_price(symbol)
             logger.debug(f"{symbol} price: {current_price}")
             # Add price alert logic here
     
@@ -106,16 +105,16 @@ class TradingManager:
             if self._should_trigger_order(order, account_value):
                 self._place_bracket_order(order)
     
-    def _should_trigger_order(self, order, account_value) -> bool:
+    async def _should_trigger_order(self, order, account_value) -> bool:
         """Check order triggering conditions"""
         # Add your custom entry logic here
-        current_price = self.price_service.get_price(order['symbol'])
+        current_price = await self.price_service.get_price(order['symbol'])
         if order['side'] == 'Buy':
             return current_price <= order['entry']
         else:
             return current_price >= order['entry']
     
-    def _place_bracket_order(self, order):
+    async def _place_bracket_order(self, order):
         """Execute bracket order with risk management"""
         try:
             # Build the BracketOrder object
@@ -135,7 +134,7 @@ class TradingManager:
 
             # Place the order
             result = bracket_order.place_with_config(
-                current_price=self.price_service.get_price(order['symbol']),
+                current_price=await self.price_service.get_price(order['symbol']),
                 price_service=self.price_service,
                 status_callback=status_callback
             )

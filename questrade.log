@@ -12,3 +12,23 @@
 2025-04-19 07:26:39,921 - core.logger - INFO - Starting trading session | DryRun=True
 2025-04-19 07:26:46,852 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
 2025-04-19 07:26:46,853 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 07:35:49,822 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 07:35:49,879 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 07:35:49,880 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 07:42:36,332 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 07:42:36,379 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 07:42:36,379 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 07:54:31,532 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 07:54:31,603 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 07:54:31,603 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 07:55:15,226 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 07:55:15,332 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 07:55:15,332 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 08:00:09,685 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 08:00:09,737 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 08:00:09,737 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:12:36,664 - core.logger - INFO - Starting trading session | DryRun=True
+2025-04-19 11:12:41,940 - core.logger - INFO - TRADING_HOURS from env: [('9:30', '16:00')] (<class 'list'>)
+2025-04-19 11:12:41,940 - core.logger - INFO - Final parsed time ranges: [(datetime.time(9, 30), datetime.time(16, 0))]
+2025-04-19 11:12:42,306 - core.logger - INFO - Starting trading manager
+2025-04-19 11:12:42,340 - core.logger - ERROR - Fatal error in trading session: '<=' not supported between instances of 'coroutine' and 'float'

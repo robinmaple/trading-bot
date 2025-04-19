@@ -9,8 +9,8 @@ from core.logger import logger
 class SymbolResolver:
     def __init__(self):
         self.auth = QuestradeAuth()
-        self.base_url = self.auth.get_base_url()
-        self.headers = self.auth.get_auth_headers()
+        self.base_url = f"{self.auth.api_server}/v1/symbols/search"
+        self.headers = {'Authorization': f'Bearer {self.auth.get_valid_token()}'}
 
         # Cache to avoid repeated API calls
         self.symbol_cache: Dict[str, Dict] = {}

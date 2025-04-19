@@ -53,3 +53,4 @@ class QuestradeAuth:
         headers = {'Authorization': f'Bearer {self.get_valid_token()}'}
         url = f"{self.api_server}v1/accounts"
         return requests.get(url, headers=headers).json()
+    
