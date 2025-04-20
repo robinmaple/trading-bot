@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from core.models import OrderMethod, OrderDirection
 from config.env import (
     PROFIT_TO_LOSS_RATIO as DEFAULT_PROFIT_TO_LOSS_RATIO,
     RISK_OF_CAPITAL as DEFAULT_RISK_OF_CAPITAL,
@@ -29,17 +30,17 @@ class TradingPlanManager:
             raise ValueError(f"Side must be 'Buy' or 'Sell': {raw}")
 
         entry_type = raw.get("entry_type", "limit").lower()
-        if entry_type not in ["limit", "stop_limit"]:
+        if entry_type not in [OrderMethod.LIMIT, OrderMethod.STOP_LIMIT]:
             raise ValueError(f"Invalid entry_type: {entry_type}")
 
         entry_stop_trigger = raw.get("entry_stop_trigger")
 
         return {
             "symbol": raw["symbol"],
-            "side": side,
+            "side": side.value,
             "entry": float(raw["entry"]),
             "stop": float(raw["stop"]),
-            "entry_type": entry_type,
+            "entry_type": entry_type.value,
             "entry_stop_trigger": float(entry_stop_trigger) if entry_stop_trigger else None,
             "profit_to_loss_ratio": float(raw.get("profit_to_loss_ratio", DEFAULT_PROFIT_TO_LOSS_RATIO)),
             "risk_of_capital": float(raw.get("risk_of_capital", DEFAULT_RISK_OF_CAPITAL)),

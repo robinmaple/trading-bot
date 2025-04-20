@@ -1,9 +1,25 @@
 # core/models.py
+from enum import Enum, auto
 
-from enum import Enum
+class OrderLifecycle(str, Enum):
+    """Tracks order progress (new system)"""
+    PENDING = "pending"
+    PLACED = "placed"
+    FILLED = "filled"
+    CLOSED = "closed"
+    FAILED = "failed"
 
-class OrderStatus(str, Enum):
+class OrderType(str, Enum):
+    """Classifies order purpose (your existing system)"""
     ENTRY = "entry"
     STOP_LOSS = "stop_loss"
     PROFIT_TARGET = "profit_target"
-    CLOSED = "closed"
+
+class OrderDirection(str, Enum):
+    BUY = "Buy"
+    SELL = "Sell"
+
+class OrderMethod(str, Enum):
+    LIMIT = "limit"
+    STOP_LIMIT = "stop-limit"
+    MARKET = "market"

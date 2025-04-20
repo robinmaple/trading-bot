@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any
-from core.models import OrderStatus
+from core.models import OrderLifecycle, OrderType, OrderMethod, OrderStatus
 from core.symbols.symbol_resolver import SymbolResolver
 
 from config.env import (
@@ -177,7 +177,7 @@ class BracketOrder:
             self.entry_price = entry_price
             self.stop_loss_price = stop_loss_price
             self.take_profit_price = take_profit_price
-            self.entry_type = entry_type
+            self.entry_type: OrderMethod = OrderMethod(entry_type)
             self.breakout_trigger_price = breakout_trigger_price
             self.plan_id = plan_id
             self.order_service = order_service
@@ -197,9 +197,9 @@ class BracketOrder:
             "symbol": self.symbol,
             "quantity": self.quantity,
             "entry_price": self.entry_price,
-            "status": "open",
+            "status": OrderLifecycle.PLACED.value,
+            "order_type": OrderType.ENTRY.value,
             "executed_at": datetime.utcnow().isoformat(),
-            "order_type": self.entry_type,
             "is_paper": self.order_service.dry_run,
             "order_group_id": self.order_group_id
         })
@@ -209,7 +209,7 @@ class BracketOrder:
             "order_group_id": self.order_group_id,
             "exit_price": exit_price,
             "pnl": pnl,
-            "status": "closed",
+            "status": OrderLifecycle.CLOSED.value,
             "closed_at": datetime.utcnow().isoformat()
         })
 
