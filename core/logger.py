@@ -18,5 +18,14 @@ def setup_logger(debug=False):
     )
     return logging.getLogger(__name__)
 
+def redact_sensitive(text: str) -> str:
+    sensitive_keys = ['token=', 'apikey=', 'password=', 'secret=']
+    for key in sensitive_keys:
+        if key in text.lower():
+            start = text.lower().find(key) + len(key)
+            # Redact the next 20 characters (adjust as needed)
+            text = text[:start] + 'REDACTED' + text[start+20:]
+    return text
+
 # Initialize with debug=False by default
 logger = setup_logger()

@@ -2,15 +2,19 @@ from core.logger import logger
 from .mock_service import MockPriceService
 from .alphavantage_service import AlphaVantagePriceService
 from core.price_services.finnhub_service import FinnhubPriceService
+from core.price_services.questrade_service import QuestradePriceService
 from core.price_services.price_service import PriceService
+from core.price_services.composite_price_service import CompositePriceService
 # Add additional imports here as needed
 
 class MultiProviderPriceService(PriceService):
-    def __init__(self):
+    def __init__(self, questrade_api_client):  # Pass Questrade client
         self.providers = [
-            AlphaVantagePriceService(),
-            FinnhubPriceService(),
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    (),  # fallback
+            CompositePriceService(
+                AlphaVantagePriceService(),
+                FinnhubPriceService(),
+                QuestradePriceService(questrade_api_client)  # Add Questrade
+            )
         ]
 
     def get_price(self, symbol: str) -> float:

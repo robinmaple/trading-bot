@@ -1,11 +1,13 @@
 import os
 from typing import List, Tuple
+from dotenv import load_dotenv
+load_dotenv()
 
 def _parse_trading_hours(hours_str: str) -> List[Tuple[str, str]]:
     """Parse TRADING_HOURS into list of (start, end) tuples."""
     if not isinstance(hours_str, str):
         raise ValueError("Input must be a string")
-
+    
     ranges = []
     for range_str in hours_str.split(','):
         range_str = range_str.strip()
@@ -31,7 +33,7 @@ DAILY_LOSS_LIMIT_PERCENT = float(os.getenv("DAILY_LOSS_LIMIT_PERCENT", "2.0"))
 # Session Management
 CLOSE_POSITIONS_BEFORE_CLOSE = os.getenv("CLOSE_POSITIONS_BEFORE_CLOSE", "Yes").lower() == "yes"
 CLOSE_TRADES_BUFFER_MINUTES = int(os.getenv("CLOSE_TRADES_BUFFER_MINUTES", "5"))
-TRADING_HOURS = _parse_trading_hours(os.getenv("TRADING_HOURS", "9:30-16:00"))
+TRADING_HOURS = _parse_trading_hours(os.getenv("TRADING_HOURS", "9:30-23:59"))
 
 # API URLs and Keys for Price Services
 ALPHA_VANTAGE_API_URL = os.getenv("ALPHA_VANTAGE_API_URL", "https://www.alphavantage.co/query")
