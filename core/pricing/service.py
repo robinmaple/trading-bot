@@ -45,3 +45,10 @@ class MultiProviderPriceService:
             if price_tick:
                 yield price_tick
             await asyncio.sleep(interval)
+
+    async def get_price(self, symbol: str) -> float:
+        """Async wrapper to fetch the best available price, compatible with trading manager."""
+        price_tick = self.get_best_price(symbol)
+        if price_tick:
+            return price_tick.price
+        raise RuntimeError(f"No price available for {symbol}")
