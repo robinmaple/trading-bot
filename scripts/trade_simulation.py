@@ -1,23 +1,26 @@
+import asyncio
 from core.brokerages.questrade.auth import QuestradeAuth
 from core.brokerages.questrade.client import QuestradeClient
 from core.pricing.service import MultiProviderPriceService
-from core.trading.executor import OrderExecutor
-from core.trading.history import TradeHistoryLogger
-from core.orders.models import OrderRequest
+from core.trading.manager import TradingManager
+from config import settings
 
-import sys
-print(sys.path)  # Ensure 'c:/Projects/questrade_bot' is listed
+async def main():
+    # 1. Initialize authentication
+    auth = QuestradeAuth()
+    
+    # 2. Set up brokerage clients
+    questrade_client = QuestradeClient(auth)
+    price_service = MultiProviderPriceService([questrade_client])
+    
+    # 3. Initialize TradingManager with protocol-compliant clients
+    trading_manager = TradingManager(
+        order_client=questrade_client,  # Must implement OrderProtocol
+        price_client=price_service     # Must implement PriceProtocol
+    )
+    
+    # 4. Run the trading loop
+    await trading_manager.run()
 
-# 1. Initialize services
-auth = QuestradeAuth()
-questrade = QuestradeClient(auth)
-price_service = MultiProviderPriceService([questrade])
-history = TradeHistoryLogger()
-
-# 2. Execute a trade
-executor = OrderExecutor(questrade)
-order = OrderRequest(symbol="AAPL", quantity=10, order_type="market")
-fill = executor.execute(order)
-history.log_fill(fill)
-
-print(f"Order {fill.order_id} filled at {fill.filled_at}")
+if __name__ == "__main__":
+    asyncio.run(main())
