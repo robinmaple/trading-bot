@@ -8,7 +8,7 @@ questrade.log
 # Sensitive data
 tokens.json
 config/trading_plan.json
-
+logs/
 # VS files
 .vscode/
 
