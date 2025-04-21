@@ -2,7 +2,7 @@ import json
 import os
 from typing import Optional, Dict
 
-from core.auth import QuestradeAuth  # Reuse your existing auth
+from core.brokerages.questrade.auth import QuestradeAuth  # Reuse your existing auth
 from core.logger import logger
 
 

@@ -1,5 +1,5 @@
 import requests
-from core.auth import QuestradeAuth  # Import existing auth
+from core.brokerages.questrade.auth import QuestradeAuth
 
 class AccountService:
     """Handles all account-related operations"""

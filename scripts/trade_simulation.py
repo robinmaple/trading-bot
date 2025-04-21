@@ -1,24 +1,23 @@
-from core.brokerages.questrade import QuestradeAuth
-from core.trading_manager import TradingManager
-from config.env import DRY_RUN
-from core.logger import logger
-import asyncio
+from core.brokerages.questrade.auth import QuestradeAuth
+from core.brokerages.questrade.client import QuestradeClient
+from core.pricing.service import MultiProviderPriceService
+from core.trading.executor import OrderExecutor
+from core.trading.history import TradeHistoryLogger
+from core.orders.models import OrderRequest
 
-async def trade_simulation():
-    logger.info(f"Starting trading session | DryRun={DRY_RUN}")
-    
-    # Initialize trading manager with auth
-    auth = QuestradeAuth()
-    manager = TradingManager(auth)
-    
-    try:
-        # Run the main trading loop
-        await manager.run()
-    except KeyboardInterrupt:
-        logger.info("Gracefully shutting down...")
-    except Exception as e:
-        logger.error(f"Fatal error in trading session: {str(e)}")
-        raise
+import sys
+print(sys.path)  # Ensure 'c:/Projects/questrade_bot' is listed
 
-if __name__ == "__main__":
-    asyncio.run(trade_simulation())
+# 1. Initialize services
+auth = QuestradeAuth()
+questrade = QuestradeClient(auth)
+price_service = MultiProviderPriceService([questrade])
+history = TradeHistoryLogger()
+
+# 2. Execute a trade
+executor = OrderExecutor(questrade)
+order = OrderRequest(symbol="AAPL", quantity=10, order_type="market")
+fill = executor.execute(order)
+history.log_fill(fill)
+
+print(f"Order {fill.order_id} filled at {fill.filled_at}")

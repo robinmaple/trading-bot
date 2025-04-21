@@ -1,4 +1,5 @@
-from .auth import QuestradeAuth
-from .logger import logger
+# core/__init__.py
+__all__ = []  # Explicitly export nothing
 
-__all__ = ['QuestradeAuth', 'logger']
+# Optional: Package version
+__version__ = "1.0.0"

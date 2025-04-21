@@ -19,6 +19,11 @@ class OrderProtocol(Protocol):
         """Cancels an order by ID. Returns success status."""
         ...
 
+@runtime_checkable
+class BrokerageProtocol(Protocol):
+    """Base protocol all brokerages must implement"""
+    def connect(self) -> bool: ...
+
 # Shared data models (minimal, extend as needed)
 @dataclass
 class OrderRequest:
