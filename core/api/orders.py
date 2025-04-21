@@ -2,7 +2,7 @@ import requests
 from typing import Dict, List, Optional, Union
 from core.logger import logger
 import uuid
-from core.price_services.price_service import PriceService
+from core.pricing.service import MultiProviderPriceService
 from typing import Optional, Callable
 import json
 import os
@@ -170,7 +170,7 @@ class BracketOrder:
             plan_id: str,
             entry_type: str = "limit",
             breakout_trigger_price: Optional[float] = None,
-            price_service: Optional[PriceService] = None
+            price_service: Optional[MultiProviderPriceService] = None
         ):
             self.symbol = symbol
             self.quantity = quantity

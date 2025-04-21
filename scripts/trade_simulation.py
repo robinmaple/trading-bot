@@ -1,4 +1,4 @@
-from core.auth import QuestradeAuth
+from core.brokerages.questrade import QuestradeAuth
 from core.trading_manager import TradingManager
 from config.env import DRY_RUN
 from core.logger import logger

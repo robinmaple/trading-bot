@@ -7,7 +7,7 @@ from core.trading_plan import TradingPlanManager
 from core.api.orders import OrderService, BracketOrder
 from core.utils.trading_hours import TradingHours
 from core.risk.risk_monitor import RiskMonitor
-from core.price_services.multiprovider_service import MultiProviderPriceService
+from core.pricing.service import MultiProviderPriceService
 from core.models import PeriodType
 from config.env import CLOSE_TRADES_BUFFER_MINUTES
 

@@ -3,10 +3,14 @@
 
 # Log files
 questrade.log
+*.log
 
 # Sensitive data
 tokens.json
 config/trading_plan.json
+
+# VS files
+.vscode/
 
 # Python bytecode and cache files
 *.py[cod]
