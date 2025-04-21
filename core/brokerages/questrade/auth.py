@@ -5,7 +5,7 @@ from threading import Lock
 from pathlib import Path
 from typing import Optional
 from config.settings import QUESTRADE_TOKEN_URL, BASE_DIR
-from core.logger import logger
+from core.logger import logger, redact_sensitive
 
 class QuestradeAuth:
     def __init__(self, refresh_token: Optional[str] = None):
@@ -13,7 +13,7 @@ class QuestradeAuth:
         self.token_file = BASE_DIR / 'tokens.json'
         self.refresh_token = refresh_token or self._load_refresh_token()
 
-        logger.info(f"Using refresh_token: {self.refresh_token}")
+        logger.info(f"Using refresh_token: {redact_sensitive(self.refresh_token)}")
 
         self.access_token: Optional[str] = None
         self.api_server: Optional[str] = None
@@ -71,8 +71,3 @@ class QuestradeAuth:
     def get_accounts(self):
         url = f"{self.api_server}v1/accounts"
         return self.create_session().get(url).json()
-    
-# At BOTTOM of auth.py
-if __name__ == "__main__":
-    print("✅ auth.py is accessible and running directly")
-    print(f"🔍 Class is defined: {QuestradeAuth.__module__}.{QuestradeAuth.__name__}")

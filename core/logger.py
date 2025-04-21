@@ -19,11 +19,19 @@ def setup_logger(debug=False):
     return logging.getLogger(__name__)
 
 def redact_sensitive(text: str) -> str:
-    sensitive_keys = ['token=', 'apikey=', 'password=', 'secret=']
+    if not text:
+        return text
+        
+    # Redact standalone tokens (like refresh tokens)
+    if len(text) in range(20, 100):  # Typical token length range
+        if text.isalnum() or '-' in text or '_' in text:
+            return f"{text[:4]}...{text[-4:]}"  # Show first/last 4 chars
+    
+    # Redact tokens in key=value pairs
+    sensitive_keys = ['token=', 'apikey=', 'password=', 'secret=', 'refresh_token=']
     for key in sensitive_keys:
         if key in text.lower():
             start = text.lower().find(key) + len(key)
-            # Redact the next 20 characters (adjust as needed)
             text = text[:start] + 'REDACTED' + text[start+20:]
     return text
 
