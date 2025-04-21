@@ -23,3 +23,14 @@ class OrderMethod(str, Enum):
     LIMIT = "limit"
     STOP_LIMIT = "stop-limit"
     MARKET = "market"
+
+class PeriodType(Enum):
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+class OrderStatus(str, Enum):
+    OPEN = "open"
+    FILLED = "filled"
+    CANCELED = "canceled"
+    REJECTED = "rejected"

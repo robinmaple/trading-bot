@@ -45,6 +45,11 @@ FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
 LOG_DIR = os.getenv("LOG_DIR", "logs\executed_orders")
 LOG_FILE = os.getenv("LOG_FILE", "trading_log.txt")
 
+# Risk Management Parameters
+DAILY_LOSS_LIMIT_PERCENT = float(os.getenv("DAILY_LOSS_LIMIT_PERCENT", "2.0"))
+WEEKLY_LOSS_LIMIT_PERCENT = float(os.getenv("WEEKLY_LOSS_LIMIT_PERCENT", "5.0"))
+MONTHLY_LOSS_LIMIT_PERCENT = float(os.getenv("MONTHLY_LOSS_LIMIT_PERCENT", "10.0"))
+
 # Validation
 assert 0 < RISK_OF_CAPITAL <= 1, "RISK_OF_CAPITAL must be between 0 and 1"
 assert PROFIT_TO_LOSS_RATIO >= 1, "PROFIT_TO_LOSS_RATIO must be >= 1"

@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any
-from core.models import OrderLifecycle, OrderType, OrderMethod, OrderStatus
+from core.models import (OrderLifecycle, OrderType, OrderMethod, OrderStatus)
 from core.symbols.symbol_resolver import SymbolResolver
 
 from config.env import (

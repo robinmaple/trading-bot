@@ -6,15 +6,16 @@ from core.logger import logger
 from core.trading_plan import TradingPlanManager
 from core.api.orders import OrderService, BracketOrder
 from core.utils.trading_hours import TradingHours
-from core.risk.daily_loss_tracker import DailyLossTracker
+from core.risk.risk_monitor import RiskMonitor
 from core.price_services.multiprovider_service import MultiProviderPriceService
-
+from core.models import PeriodType
+from config.env import CLOSE_TRADES_BUFFER_MINUTES
 
 class TradingManager:
     def __init__(self, auth_client):
         self.auth = auth_client
         self.trading_hours = TradingHours()
-        self.loss_tracker = DailyLossTracker()
+        self.risk_monitor = RiskMonitor()
         self._init_services()
         self._load_config()
         self.active_positions: Dict[str, dict] = {}
@@ -22,7 +23,7 @@ class TradingManager:
     def _init_services(self):
         """Initialize all required services"""
         self.order_service = OrderService(self.auth)
-        self.price_service = self.price_service = MultiProviderPriceService()
+        self.price_service = MultiProviderPriceService(self.auth.questrade_client)
 
         self.plan_manager = TradingPlanManager()
     
@@ -57,7 +58,8 @@ class TradingManager:
             time.sleep(5)  # Throttle API calls
     
     def _pre_trade_checks(self) -> bool:
-        """Validate all trading conditions"""
+        """Enhanced risk validation with multi-period checks"""
+        # Market hours check
         if not self.trading_hours.is_market_open():
             logger.info("Outside trading hours")
             current_session = self.trading_hours.get_current_session()
@@ -66,19 +68,42 @@ class TradingManager:
             return False
             
         account_value = self._get_account_value()
-        if self.loss_tracker.is_limit_breached(account_value):
-            logger.warning("Daily loss limit breached - trading paused")
-            return False
-            
+        
+        # Multi-period risk checks
+        risk_checks = [
+            (PeriodType.DAILY, "Daily"),
+            (PeriodType.WEEKLY, "Weekly"),
+            (PeriodType.MONTHLY, "Monthly")
+        ]
+        
+        for period, period_name in risk_checks:
+            if self.risk_monitor.is_limit_breached(period, account_value):
+                logger.warning(
+                    f"{period_name} loss limit breached - "
+                    f"Current PnL: {self.risk_monitor.get_pnl(period):.2f} "
+                    f"(Limit: {self.risk_monitor.limits[period]}%)"
+                )
+                return False
+                
         return True
     
     def _should_close_positions(self, session) -> bool:
-        """Check if positions should be closed before session end"""
-        session_end = datetime.combine(datetime.today(), session[1])
-        return (
-            self.close_positions_flag and
-            (session_end - datetime.now()) < timedelta(minutes=self.close_trades_buffer)
-        )
+        """Enhanced closing logic considering risk state"""
+        # Existing conditions
+        if session.remaining_minutes <= CLOSE_TRADES_BUFFER_MINUTES:
+            return True
+            
+        # New risk-based closing
+        if self.risk_monitor.get_pnl(PeriodType.DAILY) < 0:
+            account_value = self._get_account_value()
+            daily_utilization = (
+                abs(self.risk_monitor.get_pnl(PeriodType.DAILY)) / 
+                (account_value * self.risk_monitor.limits[PeriodType.DAILY] / 100)
+            )
+            if daily_utilization >= 0.8:  # Close if nearing limit
+                return True
+                
+        return False
     
     async def _monitor_prices(self):
         """Monitor all tickers in trading plan"""
