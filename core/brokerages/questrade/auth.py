@@ -62,8 +62,10 @@ class QuestradeAuth:
         """Creates an authenticated requests.Session."""
         session = requests.Session()
         session.headers.update({
-            'Authorization': f'Bearer {self.get_valid_token()}',
-            'Content-Type': 'application/json'
+            'Authorization': f'Bearer {self.get_valid_token()}'
+            #'Authorization': f'Bearer {self.get_valid_token()}',
+            # 'Content-Type': 'application/json',
+            #'Accept': 'application/json'  # <-- Required!
         })
         return session
 

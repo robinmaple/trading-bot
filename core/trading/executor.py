@@ -7,9 +7,9 @@ class OrderExecutor:
     def __init__(self, broker: OrderProtocol):
         self.broker = broker
 
-    def execute(self, order: OrderRequest) -> FillReport:
+    async def execute(self, order: OrderRequest) -> FillReport:
         """Submits a single order and returns fill report."""
-        return self.broker.submit_order(order)
+        return await self.broker.submit_order(order)
 
     def execute_bracket(self, bracket: BracketOrder) -> List[FillReport]:
         """

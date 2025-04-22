@@ -13,17 +13,48 @@ class QuestradeClient(PriceProtocol, OrderProtocol):
         self._session = None  # Will hold authenticated Questrade API session
 
     # --- PriceProtocol Implementation ---
-    def get_price(self, symbol: str) -> float:
-        """Fetches current market price for a symbol from Questrade."""
+    async def get_price(self, symbol: str) -> float:
+        """Fetches the current market price for a symbol like 'AAPL'."""
+        symbol_id = self.lookup_symbol_id(symbol)
+
+        url = f"{self.auth.api_server}v1/markets/quotes/{symbol_id}"
+        response = self._session.get(url)
+        logger.info(f"Quote response: {response.status_code} - {response.text}")
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Failed to fetch quote for {symbol} (ID: {symbol_id})")
+
+        quote_data = response.json()
+        quote = quote_data.get("quotes", [{}])[0]
+
+        # Prefer lastTradePrice, then fallback to bid or ask
+        price = quote.get("lastTradePrice") or quote.get("bidPrice") or quote.get("askPrice")
+
+        if not price:
+            raise RuntimeError(f"No price available for {symbol}: {quote_data}")
+
+        return price
+   
+    def lookup_symbol_id(self, symbol: str) -> int:
+        """Looks up the Questrade symbolId for a given stock symbol like 'AAPL'."""
         if not self._session:
             self._session = self.auth.create_session()
-        
-        # Example: Questrade API call (simplified)
-        response = self._session.get(f"markets/quotes/{symbol}")
-        return response.json()["lastPrice"]
+
+        url = f"{self.auth.api_server}v1/symbols?names={symbol}"
+        response = self._session.get(url)
+        logger.info(f"Symbol lookup response: {response.status_code} - {response.text}")
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Symbol lookup failed for {symbol}")
+
+        data = response.json()
+        if not data["symbols"]:
+            raise RuntimeError(f"No matching symbol found for {symbol}")
+
+        return data["symbols"][0]["symbolId"]
 
     # --- OrderProtocol Implementation ---
-    def submit_order(self, order: OrderRequest) -> FillReport:
+    async def submit_order(self, order: OrderRequest) -> FillReport:
         """Submits an order via Questrade API or simulates it if in Dry Run mode."""
         if DRY_RUN:
             logger.info(f"[DRY RUN] Would submit order: {order}")
@@ -36,7 +67,6 @@ class QuestradeClient(PriceProtocol, OrderProtocol):
         if not self._session:
             self._session = self.auth.create_session()
         
-        # Convert OrderRequest to Questrade-specific format
         questrade_order = {
             "symbol": order.symbol,
             "quantity": order.quantity,
@@ -64,7 +94,26 @@ class QuestradeClient(PriceProtocol, OrderProtocol):
             status="filled" if response.ok else "rejected"
         )
 
-    def cancel_order(self, order_id: str) -> bool:
+    async def cancel_order(self, order_id: str) -> bool:
         """Cancels an order in Questrade."""
         response = self._session.delete(f"orders/{order_id}")
         return response.ok
+
+    async def get_buying_power(self, account_id: str) -> float:
+        """Fetch available buying power for the given Questrade account."""
+        if not self._session:
+            self._session = self.auth.create_session()
+
+        url = f"{self.auth.api_server}v1/accounts/{account_id}/balances"
+        response = self._session.get(url)
+        logger.info(f"Buying power response: {response.status_code} - {response.text}")
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Failed to retrieve buying power for account {account_id}")
+
+        data = response.json()
+        combined = data.get("combinedBalances", [{}])[0]
+        buying_power = combined.get("buyingPower", 0.0)
+
+        logger.info(f"Buying power for account {account_id}: {buying_power}")
+        return float(buying_power)

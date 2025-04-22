@@ -1,28 +1,41 @@
 from typing import Protocol, runtime_checkable
 from dataclasses import dataclass
 
+
 @runtime_checkable
 class PriceProtocol(Protocol):
     """Interface for price providers (Questrade, IBKR, etc.)."""
-    def get_price(self, symbol: str) -> float:
+
+    async def get_price(self, symbol: str) -> float:
         """Returns the current market price for a symbol."""
         ...
+
 
 @runtime_checkable
 class OrderProtocol(Protocol):
     """Interface for order execution."""
-    def submit_order(self, order: 'OrderRequest') -> 'FillReport':
+
+    async def submit_order(self, order: 'OrderRequest') -> 'FillReport':
         """Submits an order and returns a fill report."""
         ...
 
-    def cancel_order(self, order_id: str) -> bool:
+    async def cancel_order(self, order_id: str) -> bool:
         """Cancels an order by ID. Returns success status."""
         ...
+
+    async def get_buying_power(self, account_id: str) -> float:
+        """Return available buying power for trading"""
+        ...
+
 
 @runtime_checkable
 class BrokerageProtocol(Protocol):
     """Base protocol all brokerages must implement"""
-    def connect(self) -> bool: ...
+
+    async def connect(self) -> bool:
+        """Establish connection to brokerage."""
+        ...
+
 
 # Shared data models (minimal, extend as needed)
 @dataclass
@@ -30,6 +43,7 @@ class OrderRequest:
     symbol: str
     quantity: float
     order_type: str  # "limit", "market", etc.
+
 
 @dataclass
 class FillReport:
