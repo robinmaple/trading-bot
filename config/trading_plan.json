@@ -2,16 +2,15 @@
   {
     "symbol": "AAPL",
     "side": "Buy",
-    "entry": 200.00,
-    "stop": 194.59,
-    "entry_type": "stop_limit",
-    "entry_stop_trigger": 200.50
+    "entry": 205.00,
+    "stop": 199.99,
+    "entry_type": "limit"
   },
   {
     "symbol": "TSLA",
-    "side": "Sell",
-    "entry": 240,
-    "stop": 243.59,
+    "side": "Buy",
+    "entry": 255,
+    "stop": 249.59,
     "entry_type": "limit"
   }
 ]

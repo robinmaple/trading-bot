@@ -1,3 +1,6 @@
+import json
+import os
+from datetime import datetime
 import asyncio
 import math
 from dataclasses import dataclass
@@ -7,6 +10,7 @@ from core.orders.bracket import BracketOrder
 from core.brokerages.protocol import OrderProtocol, PriceProtocol
 from core.trading.plan import TradingPlan
 from config.env import DRY_RUN
+
 
 from config.env import (
     DRY_RUN,
@@ -85,13 +89,8 @@ class TradingManager:
 
                 # Check trigger conditions
                 if self._should_trigger(plan, current_price):
-                    if DRY_RUN:
-                        logger.info(
-                            f"[DRY RUN] Would execute: {plan} "
-                            f"at current price: {current_price}"
-                        )
-                    else:
-                        await self._execute_plan(plan, current_price)
+                    bracket = BracketOrder.from_plan(plan, current_price)     
+                    await self._execute_plan(plan, bracket)
                         
             except KeyError as e:
                 logger.error(f"Missing key in plan {symbol}: {str(e)}")
@@ -113,16 +112,11 @@ class TradingManager:
         """Check plan-specific conditions"""
         return True  # Placeholder for real logic
 
-    async def _execute_plan(self, plan: dict, current_price: float):
-        """Execute a single trading plan"""
-        if self.config.dry_run:
-            logger.info(f"[DRY RUN] Would execute: {plan}")
-            return
-
+    async def _execute_plan(self, plan: dict, bracket: BracketOrder):
+        """Execute a single trading plan with all existing functionality"""
         try:
-            bracket = BracketOrder.from_plan(plan, current_price)
-            buying_power = await self.order_client.get_buying_power()
-
+            # Calculate quantity (same for both dry-run and real execution)
+            buying_power = await self.order_client.get_buying_power(account_id=self.config.account_id)
             adjusted_qty = self.adjust_quantity_for_capital(
                 buying_power=buying_power,
                 entry_price=bracket.entry_price,
@@ -131,7 +125,7 @@ class TradingManager:
                 available_quantity_ratio=self.config.available_quantity_ratio
             )
 
-            if adjusted_qty == 0:
+            if adjusted_qty <= 0:
                 logger.info(
                     f"Skipped {plan['symbol']}: insufficient capital for min quantity "
                     f"(Required: {self.config.risk_of_capital * self.config.available_quantity_ratio})"
@@ -140,18 +134,34 @@ class TradingManager:
 
             bracket.quantity = adjusted_qty
 
-            result = await self.order_client.submit_bracket_order(
-                bracket,
-                account_id=self.config.account_id
-            )
-
-            if result.success:
+            if self.config.dry_run:
+                # Dry-run specific handling (preserve all existing logging)
                 self.plan.mark_executed(plan['symbol'])
                 self.active_orders[plan['symbol']] = bracket
-                logger.info(f"Order executed: {result}")
+                self.log_executed_order(plan, bracket, dry_run=True)
+                
+                logger.info(
+                    f"[DRY RUN] Would execute: {plan['symbol']} "
+                    f"Qty: {bracket.quantity} @ {bracket.entry_price} "
+                    f"(TP: {bracket.take_profit_price}, SL: {bracket.stop_loss_price})\n"
+                    f"Full plan: {plan}"  # Preserve original plan logging
+                )
+            else:
+                # Real execution (preserve all existing success handling)
+                result = await self.order_client.submit_bracket_order(
+                    bracket,
+                    account_id=self.config.account_id
+                )
+                
+                if result.success:
+                    self.plan.mark_executed(plan['symbol'])
+                    self.active_orders[plan['symbol']] = bracket
+                    self.log_executed_order(plan, bracket, dry_run=False)
+                    logger.info(f"Order executed: {result}")
 
         except Exception as e:
-            logger.error(f"Order failed for {plan['symbol']}: {e}")
+            # Preserve existing error handling
+            logger.error(f"Order failed for {plan['symbol']}: {e}", exc_info=True)    
 
     def adjust_quantity_for_capital(
         self,
@@ -184,3 +194,64 @@ class TradingManager:
             return 0
 
         return quantity
+
+    async def _simulate_bracket_order(self, plan: dict, current_price: float):
+        logger.info(
+            f"[DRY RUN] Would execute: {plan} at current price: {current_price}"
+        )
+
+        try:
+            bracket = BracketOrder.from_plan(plan)
+            bracket.quantity = self.adjust_quantity_for_capital(
+                buying_power=self.buying_power,
+                entry_price=bracket.entry_price,
+                stop_loss_price=bracket.stop_loss_price,
+                risk_of_capital=self.config.risk_of_capital,
+                available_quantity_ratio=self.config.available_quantity_ratio
+            )
+
+            if bracket.quantity <= 0:
+                logger.info(f"[DRY RUN] Skipped {plan['symbol']}: insufficient quantity")
+                return
+
+            self.plan.mark_executed(plan["symbol"])
+            bracket.entry_filled_price = current_price
+            self.active_orders[plan["symbol"]] = bracket
+            self.log_executed_order(plan, bracket, dry_run=True)
+
+            logger.info(
+                f"[DRY RUN] Simulated order placed for {plan['symbol']} "
+                f"at {current_price} with qty {bracket.quantity}"
+            )
+
+        except Exception as e:
+            logger.error(f"[DRY RUN] Failed to simulate order for {plan['symbol']}: {e}")
+
+    def log_executed_order(self, plan: dict, bracket: BracketOrder, dry_run: bool):
+        """Log all executions (both dry-run and real)"""
+        try:
+            log_dir = "logs/executions"
+            os.makedirs(log_dir, exist_ok=True)
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            prefix = "dry_" if dry_run else "live_"
+            filename = f"{log_dir}/{prefix}{plan['symbol']}_{timestamp}.json"
+
+            data = {
+                "symbol": plan["symbol"],
+                "dry_run": dry_run,
+                "timestamp": timestamp,
+                "entry_price": bracket.entry_price,
+                "stop_loss": bracket.stop_loss_price,
+                "take_profit": bracket.take_profit_price,
+                "quantity": bracket.quantity,
+                "plan": plan,
+                "type": bracket.entry_type,
+                "side": bracket.side
+            }
+
+            with open(filename, "w") as f:
+                json.dump(data, f, indent=2)
+            logger.debug(f"Execution logged to {filename}")
+        except Exception as e:
+            logger.error(f"Failed to log order: {e}")

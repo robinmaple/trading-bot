@@ -1,0 +1,13 @@
+questrade:
+  supports_native_bracket: true
+  bracket_order_class:
+    primary: "Primary"
+    take_profit: "Limit"
+    stop_loss: "StopLoss"
+
+ibkr:
+  supports_native_bracket: true
+  bracket_order_class:
+    primary: "Parent"
+    take_profit: "ProfitTaker"
+    stop_loss: "StopLoss"

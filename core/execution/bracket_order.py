@@ -6,6 +6,7 @@ import json
 from core.logger import logger
 from core.models import OrderStatus, OrderType, OrderDirection
 from core.brokerages.protocol import BrokerageProtocol
+from config.broker_config import load_broker_config
 
 class BracketOrder:
     def __init__(
@@ -20,20 +21,6 @@ class BracketOrder:
         entry_type: OrderType = OrderType.LIMIT,
         breakout_trigger_price: Optional[float] = None
     ):
-        """
-        Enhanced bracket order with dual status tracking.
-        
-        Args:
-            brokerage: Broker adapter instance
-            symbol: Trading symbol
-            quantity: Order quantity
-            entry_price: Limit price for entry
-            stop_loss_price: Stop price for SL
-            take_profit_price: Limit price for TP
-            plan_id: Associated trading plan ID
-            entry_type: OrderType.LIMIT or OrderType.STOP_LIMIT
-            breakout_trigger_price: Required for stop-limit entries
-        """
         self.brokerage = brokerage
         self.symbol = symbol
         self.quantity = quantity
@@ -44,7 +31,10 @@ class BracketOrder:
         self.entry_type = entry_type
         self.breakout_trigger_price = breakout_trigger_price
         self.order_group_id = str(uuid.uuid4())
-
+        # load broker config from config/broker_config.yaml
+        self.broker_name = getattr(brokerage, "name", "unknown").lower()
+        self.broker_config = load_broker_config(self.broker_name)
+        self.supports_native = self.broker_config.get("supports_native_bracket", False)
         # Status Tracking
         self.lifecycle_status = OrderStatus.PENDING  # NEW: Tracks order progress
         self.order_type_status = None               # EXISTING: Your classification system
@@ -54,10 +44,12 @@ class BracketOrder:
         self.entry_filled = False
 
     async def execute(self) -> Dict:
-        """Main execution flow with enhanced status tracking"""
+        """Main execution flow with config-aware bracket logic"""
         self.lifecycle_status = OrderStatus.PLACED
-        
-        if self.entry_type == OrderType.LIMIT:
+
+        if self.supports_native:
+            result = await self._execute_native_bracket()
+        elif self.entry_type == OrderType.LIMIT:
             result = await self._execute_limit_entry()
         elif self.entry_type == OrderType.STOP_LIMIT:
             result = await self._execute_stop_limit_entry()
@@ -180,3 +172,28 @@ class BracketOrder:
         """Broker-specific stop-limit implementation"""
         # Implement based on your brokerage's requirements
         raise NotImplementedError("Stop-limit entry requires broker-specific implementation")
+    
+    async def _execute_native_bracket(self) -> Dict:
+        """Native bracket order flow if supported by broker"""
+        try:
+            result = await self.brokerage.place_bracket_order(
+                account_id=self._get_account_id(),
+                symbol=self.symbol,
+                quantity=self.quantity,
+                entry_price=self.entry_price,
+                stop_loss_price=self.stop_loss_price,
+                take_profit_price=self.take_profit_price,
+                entry_type=self.entry_type.value,  # 'limit' or 'stop_limit'
+                group_id=self.order_group_id
+            )
+            self.entry_order_id = result.get("entry_order_id")
+            self.stop_loss_order_id = result.get("stop_loss_order_id")
+            self.take_profit_order_id = result.get("take_profit_order_id")
+            self.lifecycle_status = OrderStatus.PLACED
+            self.order_type_status = OrderStatus.ENTRY
+
+            return self._prepare_response()
+        except Exception as e:
+            self.lifecycle_status = OrderStatus.FAILED
+            logger.error(f"Native bracket order failed: {str(e)}")
+            raise
