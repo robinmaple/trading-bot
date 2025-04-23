@@ -1,54 +1,18 @@
 [
   {
-    "plan": "EURUSD Technical Breakout",
-    "symbol": "EURUSD",
+    "symbol": "AAPL",
     "side": "Buy",
-    "entry": 1.0860,
-    "stop": 1.0820,
+    "entry": 200.00,
+    "stop": 194.59,
     "entry_type": "stop_limit",
-    "entry_stop_trigger": 1.0850,
-    "note": "Breakout above daily pivot",
-    "tags": ["forex", "breakout"]
+    "entry_stop_trigger": 200.50
   },
   {
-    "plan": "USDJPY Intervention Play",
-    "symbol": "USDJPY",
+    "symbol": "TSLA",
     "side": "Sell",
-    "entry": 153.20,
-    "stop": 154.10,
-    "entry_type": "limit",
-    "note": "Fading BOJ intervention zone",
-    "tags": ["forex", "reversal"]
-  },
-  {
-    "plan": "GBPUSD Range Fade",
-    "symbol": "GBPUSD",
-    "side": "Sell",
-    "entry": 1.2535,
-    "stop": 1.2580,
-    "entry_type": "stop_limit",
-    "entry_stop_trigger": 1.2525,
-    "note": "Fading weekly resistance",
-    "tags": ["forex", "mean-reversion"]
-  },
-  {
-    "plan": "AUDUSD Commodity Push",
-    "symbol": "AUDUSD",
-    "side": "Buy",
-    "entry": 0.6455,
-    "stop": 0.6420,
-    "entry_type": "market",
-    "note": "Playing iron ore rally",
-    "tags": ["forex", "commodity"]
-  },
-  {
-    "plan": "USDCAD Oil Correlation",
-    "symbol": "USDCAD",
-    "side": "Sell",
-    "entry": 1.3755,
-    "stop": 1.3800,
-    "entry_type": "limit",
-    "note": "Short on expected oil price rise",
-    "tags": ["forex", "oil-correlation"]
+    "entry": 240,
+    "stop": 243.59,
+    "entry_type": "limit"
   }
 ]
+ 
