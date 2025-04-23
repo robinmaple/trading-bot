@@ -6,6 +6,7 @@ from core.logger import logger
 from core.orders.bracket import BracketOrder
 from core.brokerages.protocol import OrderProtocol, PriceProtocol
 from core.trading.plan import TradingPlan
+from config.env import DRY_RUN
 
 from config.env import (
     DRY_RUN,
@@ -53,12 +54,60 @@ class TradingManager:
         return True  # Placeholder for real logic
 
     async def _process_plans(self):
-        """Check and execute all active plans"""
-        for symbol, plan in self.plan.get_active_plans().items():
-            current_price = await self.price_client.get_price(symbol)
+        """Check and execute all active plans with comprehensive error handling"""
+        
+        active_plans = self.plan.get_active_plans()
+        if not active_plans:
+            logger.debug("No active trading plans found")
+            return
 
-            if self._should_trigger(plan, current_price):
-                await self._execute_plan(plan, current_price)
+        for symbol, plan in active_plans.items():
+            try:
+                # Handle forex symbol formatting if needed
+                normalized_symbol = self._normalize_symbol(symbol)
+                
+                # Get price with error handling
+                current_price = await self.price_client.get_price(normalized_symbol)
+                
+                if current_price is None:
+                    logger.warning(
+                        f"Skipping {symbol} (normalized: {normalized_symbol}) - "
+                        "no price available"
+                    )
+                    continue
+
+                # Validate price is numeric
+                if not isinstance(current_price, (int, float)):
+                    logger.error(
+                        f"Invalid price type {type(current_price)} for {symbol}"
+                    )
+                    continue
+
+                # Check trigger conditions
+                if self._should_trigger(plan, current_price):
+                    if DRY_RUN:
+                        logger.info(
+                            f"[DRY RUN] Would execute: {plan} "
+                            f"at current price: {current_price}"
+                        )
+                    else:
+                        await self._execute_plan(plan, current_price)
+                        
+            except KeyError as e:
+                logger.error(f"Missing key in plan {symbol}: {str(e)}")
+            except ValueError as e:
+                logger.error(f"Invalid value in plan {symbol}: {str(e)}")
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error processing {symbol}: {str(e)}",
+                    exc_info=True
+                )
+
+    def _normalize_symbol(self, symbol: str) -> str:
+        """Normalize symbol format for the price client"""
+        if '/' in symbol:  # Forex pair
+            return symbol.replace('/', '')
+        return symbol
 
     def _should_trigger(self, plan: dict, price: float) -> bool:
         """Check plan-specific conditions"""

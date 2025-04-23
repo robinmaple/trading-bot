@@ -2,7 +2,8 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 from ..brokerages.protocol import PriceProtocol
 import time
-import asyncio  # For async support (optional)
+import asyncio
+from core.logger import logger
 
 @dataclass
 class PriceTick:
@@ -22,33 +23,41 @@ class MultiProviderPriceService:
                           for provider in providers}
         self._latest_prices: Dict[str, PriceTick] = {}
 
-    def get_best_price(self, symbol: str) -> Optional[PriceTick]:
+    async def get_best_price(self, symbol: str) -> Optional[PriceTick]:
         """Returns the highest bid price across all providers."""
-        prices = []
-        for provider_name, provider in self.providers.items():
-            try:
-                price = provider.get_price(symbol)
-                prices.append(PriceTick(symbol, price, provider_name, time.time()))
-            except Exception as e:
-                print(f"Price fetch failed from {provider_name}: {e}")
+        tasks = [provider.get_price(symbol) for provider in self.providers.values()]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
         
+        prices = [
+            PriceTick(symbol, price, name, time.time())
+            for (name, provider), price in zip(self.providers.items(), results)
+            if not isinstance(price, Exception)
+        ]
+                
         if not prices:
             return None
+        
         best_price = max(prices, key=lambda x: x.price)
-        self._latest_prices[symbol] = best_price
+        self._latest_prices[symbol] = best_price.price
         return best_price
 
     async def stream_prices(self, symbol: str, interval: float = 1.0):
         """Async generator for continuous price updates (e.g., for live trading)."""
         while True:
-            price_tick = self.get_best_price(symbol)
+            price_tick = await self.get_best_price(symbol)
             if price_tick:
                 yield price_tick
             await asyncio.sleep(interval)
 
     async def get_price(self, symbol: str) -> float:
-        """Async wrapper to fetch the best available price, compatible with trading manager."""
-        price_tick = self.get_best_price(symbol)
-        if price_tick:
+        """Returns the current price with better error handling."""
+        try:
+            price_tick = await self.get_best_price(symbol)
+            if not price_tick:
+                logger.warning(f"No providers returned price for {symbol}")
+                return None  # Instead of raising an error
+                
             return price_tick.price
-        raise RuntimeError(f"No price available for {symbol}")
+        except Exception as e:
+            logger.error(f"Price fetch failed for {symbol}: {str(e)}")
+            return None
