@@ -1,121 +1,54 @@
 [
   {
-    "plan": "Earnings Momentum Breakout",
-    "symbol": "AAPL",
+    "plan": "EURUSD Technical Breakout",
+    "symbol": "EURUSD",
     "side": "Buy",
-    "entry": 168.50,
-    "stop": 166.00,
-    "entry_type": "limit",
-    "quantity": 10,
-    "symbol_id": "123456789",
-    "note": "Apple technical breakout",
-    "tags": ["breakout", "tech"]
-  },
-  {
-    "plan": "EV Momentum Catch",
-    "symbol": "TSLA",
-    "side": "Buy",
-    "entry": 230.50,
-    "stop": 229.59,
+    "entry": 1.0860,
+    "stop": 1.0820,
     "entry_type": "stop_limit",
-    "entry_stop_trigger": 230.40,
-    "quantity": 5,
-    "symbol_id": "987654321",
-    "note": "Stop-limit catch on reversal",
-    "tags": ["ev", "watchlist"]
+    "entry_stop_trigger": 1.0850,
+    "note": "Breakout above daily pivot",
+    "tags": ["forex", "breakout"]
   },
   {
-    "plan": "Software Fade Short",
-    "symbol": "MSFT",
+    "plan": "USDJPY Intervention Play",
+    "symbol": "USDJPY",
     "side": "Sell",
-    "entry": 375.50,
-    "stop": 381.50,
+    "entry": 153.20,
+    "stop": 154.10,
     "entry_type": "limit",
-    "quantity": 8,
-    "note": "Short near resistance",
-    "tags": ["fade", "software"]
+    "note": "Fading BOJ intervention zone",
+    "tags": ["forex", "reversal"]
   },
   {
-    "plan": "Low Cap Volatility Snipe",
-    "symbol": "PLTR",
-    "side": "Buy",
-    "entry": 23.50,
-    "stop": 22.80,
-    "entry_type": "limit",
-    "quantity": 15,
-    "note": "Volatility-based entry on pullback",
-    "tags": ["smallcap", "volatility"]
-  },
-  {
-    "plan": "MegaCap Rejection Short",
-    "symbol": "GOOGL",
+    "plan": "GBPUSD Range Fade",
+    "symbol": "GBPUSD",
     "side": "Sell",
-    "entry": 158.30,
-    "stop": 160.50,
+    "entry": 1.2535,
+    "stop": 1.2580,
     "entry_type": "stop_limit",
-    "entry_stop_trigger": 158.10,
-    "quantity": 7,
-    "note": "Breakdown through key support",
-    "tags": ["short", "megacap"]
+    "entry_stop_trigger": 1.2525,
+    "note": "Fading weekly resistance",
+    "tags": ["forex", "mean-reversion"]
   },
   {
-      "plan": "EURUSD Breakout Long",
-      "symbol": "EUR/USD",
-      "side": "Buy",
-      "entry": 1.0860,
-      "stop": 1.0820,
-      "entry_type": "limit",
-      "quantity": 1000,
-      "note": "Anticipating euro breakout vs USD",
-      "tags": ["forex", "breakout", "long"]
-    },
-    {
-      "plan": "USDJPY Reversal Short",
-      "symbol": "USD/JPY",
-      "side": "Sell",
-      "entry": 153.20,
-      "stop": 154.10,
-      "entry_type": "stop_limit",
-      "entry_stop_trigger": 153.30,
-      "quantity": 1000,
-      "note": "Yen recovery after rate news",
-      "tags": ["forex", "reversal", "short"]
-    },
-    {
-      "plan": "GBPUSD Range Fade",
-      "symbol": "GBP/USD",
-      "side": "Sell",
-      "entry": 1.2535,
-      "stop": 1.2580,
-      "entry_type": "limit",
-      "quantity": 1000,
-      "note": "Short at range top resistance",
-      "tags": ["forex", "fade", "sell"]
-    },
-    {
-      "plan": "AUDUSD Breakout Long",
-      "symbol": "AUD/USD",
-      "side": "Buy",
-      "entry": 0.6455,
-      "stop": 0.6420,
-      "entry_type": "stop_limit",
-      "entry_stop_trigger": 0.6445,
-      "quantity": 1500,
-      "note": "Risk-on sentiment return",
-      "tags": ["forex", "breakout", "buy"]
-    },
-    {
-      "plan": "USDCAD Trend Follow",
-      "symbol": "USD/CAD",
-      "side": "Buy",
-      "entry": 1.3755,
-      "stop": 1.3700,
-      "entry_type": "limit",
-      "quantity": 1200,
-      "note": "Strong dollar continuation",
-      "tags": ["forex", "trend", "buy"]
-    }
-  ]
-    
-
-
+    "plan": "AUDUSD Commodity Push",
+    "symbol": "AUDUSD",
+    "side": "Buy",
+    "entry": 0.6455,
+    "stop": 0.6420,
+    "entry_type": "market",
+    "note": "Playing iron ore rally",
+    "tags": ["forex", "commodity"]
+  },
+  {
+    "plan": "USDCAD Oil Correlation",
+    "symbol": "USDCAD",
+    "side": "Sell",
+    "entry": 1.3755,
+    "stop": 1.3800,
+    "entry_type": "limit",
+    "note": "Short on expected oil price rise",
+    "tags": ["forex", "oil-correlation"]
+  }
+]
