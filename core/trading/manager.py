@@ -27,6 +27,7 @@ class TradingConfig:
     close_buffer_minutes: int = CLOSE_TRADES_BUFFER_MINUTES
     risk_of_capital: float = RISK_OF_CAPITAL
     available_quantity_ratio: float = AVAILABLE_QUANTITY_RATIO
+    persist_dry_run: bool = False  # Add this new field
 
 class TradingManager:
     def __init__(
@@ -40,129 +41,170 @@ class TradingManager:
         self.config = TradingConfig()
         self.plan = TradingPlan.load_from_file(plan_path)
         self.active_orders: Dict[str, BracketOrder] = {}
+        self._capital_lock = asyncio.Lock()
+        self.remaining_bp = 0.0
+
+        self._capital_lock = asyncio.Lock()
+        self.remaining_bp = 0.0
+        self.committed_capital = 0.0  # Track total committed
 
     async def run(self):
-        """Main trading event loop"""
-        logger.info("Starting trading manager")
-
+        """Main trading loop with execution tracking"""
+        logger.info("Starting trading manager with execution tracking")
+        
         while True:
             if not await self._should_trade():
                 await asyncio.sleep(60)
                 continue
-
+            
+            # Verify existing orders first
+            await self.verify_active_orders()
+            
+            # Process new plans
             await self._process_plans()
-            await asyncio.sleep(5)
+            await asyncio.sleep(5)  # Reduced from 60 to catch executions faster    
+        
+    async def _process_plans(self):
+        """Check and execute all active plans with capital awareness"""
+        active_plans = self.plan.get_active_plans()
+        if not active_plans:
+            return
+
+        async with self._capital_lock:
+            # Refresh buying power snapshot
+            self.remaining_bp = await self.order_client.get_buying_power(
+                account_id=self.config.account_id
+            ) - self.committed_capital
+
+            for symbol, plan in active_plans.items():
+                try:
+                    current_price = await self.price_client.get_price(
+                        self._normalize_symbol(symbol)
+                    )
+                    if not current_price:
+                        continue
+
+                    if not self._should_trigger(plan, current_price):
+                        continue
+
+                    bracket = BracketOrder.from_plan(plan, current_price)
+                    bracket.quantity = self._calculate_safe_quantity(bracket)
+
+                    if bracket.quantity <= 0:
+                        logger.info(f"Skipped {symbol}: insufficient remaining capital")
+                        continue
+
+                    # Track capital commitment
+                    order_value = bracket.entry_price * bracket.quantity
+                    self.remaining_bp -= order_value
+                    self.committed_capital += order_value
+
+                    await self._execute_plan(plan, bracket)
+
+                except Exception as e:
+                    logger.error(f"Error processing {symbol}: {e}")
+
+    def _calculate_safe_quantity(self, bracket: BracketOrder) -> int:
+        """Thread-safe quantity calculation with remaining BP"""
+        if self.remaining_bp <= 0:
+            return 0
+
+        quantity = self.adjust_quantity_for_capital(
+            buying_power=self.remaining_bp,  # Use remaining capital
+            entry_price=bracket.entry_price,
+            stop_loss_price=bracket.stop_loss_price,
+            risk_of_capital=self.config.risk_of_capital,
+            available_quantity_ratio=self.config.available_quantity_ratio
+        )
+
+        # Ensure we don't exceed remaining BP
+        max_possible = int(self.remaining_bp / bracket.entry_price)
+        return min(quantity, max_possible)
+
+    async def _execute_plan(self, plan: dict, bracket: BracketOrder):
+        symbol = plan['symbol']        
+        try:
+            if self.config.dry_run:
+                self._handle_dry_run_execution(plan, bracket)
+                return
+
+            result = await self.order_client.submit_bracket_order(
+                bracket,
+                account_id=self.config.account_id
+            )
+            
+            if result.success:
+                # Mark executed and persist immediately
+                self.plan.mark_executed(plan['symbol'], bracket.entry_price)
+                self.plan.save_to_file('config/trading_plan.json')  # Immediate persistence
+                
+                self.active_orders[plan['symbol']] = bracket
+                self.log_executed_order(plan, bracket, dry_run=False)
+                logger.info(f"Order executed: {result}")
+
+        except Exception as e:
+            logger.error(f"Order failed for {plan['symbol']}: {e}")
+            # Revert execution status if needed
+            if symbol in self.plan.executed_plans:
+                self.plan.reset_execution_status(symbol)
+
+    def _handle_dry_run_execution(self, plan: dict, bracket: BracketOrder):
+        """Dry-run execution with full tracking"""
+        self.plan.mark_executed(plan['symbol'], bracket.entry_price)
+        self.active_orders[plan['symbol']] = bracket
+        self.log_executed_order(plan, bracket, dry_run=True)
+        
+        logger.info(
+            f"[DRY RUN] Executed: {plan['symbol']} Qty: {bracket.quantity} "
+            f"@ {bracket.entry_price} | TP: {bracket.take_profit_price} "
+            f"| SL: {bracket.stop_loss_price}"
+        )
+        # Persist even in dry-run for testing
+        if self.config.persist_dry_run:  
+            self.plan.save_to_file('config/trading_plan.json')
+            
+    async def _handle_live_order(self, plan: dict, bracket: BracketOrder):
+        """Preserve all existing live execution logic"""
+        result = await self.order_client.submit_bracket_order(
+            bracket,
+            account_id=self.config.account_id
+        )
+        
+        if result.success:
+            self.plan.mark_executed(plan['symbol'])
+            self.active_orders[plan['symbol']] = bracket
+            self.log_executed_order(plan, bracket, dry_run=False)
+            logger.info(f"Order executed: {result}")
+        else:
+            raise Exception(f"Order submission failed: {result}")
+        
+    async def verify_active_orders(self):
+        """Check broker for order fulfillment and update execution status"""
+        for symbol in list(self.active_orders.keys()):
+            try:
+                status = await self.order_client.get_order_status(symbol)
+                if status in ['filled', 'completed'] and symbol not in self.plan.executed_plans:
+                    filled_price = await self.order_client.get_execution_price(symbol)
+                    self.plan.mark_executed(symbol, filled_price)
+                    self.plan.save_to_file('config/trading_plan.json')
+                    self.active_orders.pop(symbol)
+            except Exception as e:
+                logger.error(f"Failed to verify order {symbol}: {e}")
 
     async def _should_trade(self) -> bool:
         """Check market conditions"""
         return True  # Placeholder for real logic
-
-    async def _process_plans(self):
-        """Check and execute all active plans with comprehensive error handling"""
-        
-        active_plans = self.plan.get_active_plans()
-        if not active_plans:
-            logger.debug("No active trading plans found")
-            return
-
-        for symbol, plan in active_plans.items():
-            try:
-                # Handle forex symbol formatting if needed
-                normalized_symbol = self._normalize_symbol(symbol)
-                
-                # Get price with error handling
-                current_price = await self.price_client.get_price(normalized_symbol)
-                
-                if current_price is None:
-                    logger.warning(
-                        f"Skipping {symbol} (normalized: {normalized_symbol}) - "
-                        "no price available"
-                    )
-                    continue
-
-                # Validate price is numeric
-                if not isinstance(current_price, (int, float)):
-                    logger.error(
-                        f"Invalid price type {type(current_price)} for {symbol}"
-                    )
-                    continue
-
-                # Check trigger conditions
-                if self._should_trigger(plan, current_price):
-                    bracket = BracketOrder.from_plan(plan, current_price)     
-                    await self._execute_plan(plan, bracket)
-                        
-            except KeyError as e:
-                logger.error(f"Missing key in plan {symbol}: {str(e)}")
-            except ValueError as e:
-                logger.error(f"Invalid value in plan {symbol}: {str(e)}")
-            except Exception as e:
-                logger.error(
-                    f"Unexpected error processing {symbol}: {str(e)}",
-                    exc_info=True
-                )
 
     def _normalize_symbol(self, symbol: str) -> str:
         """Normalize symbol format for the price client"""
         if '/' in symbol:  # Forex pair
             return symbol.replace('/', '')
         return symbol
-
+    
     def _should_trigger(self, plan: dict, price: float) -> bool:
         """Check plan-specific conditions"""
         return True  # Placeholder for real logic
-
-    async def _execute_plan(self, plan: dict, bracket: BracketOrder):
-        """Execute a single trading plan with all existing functionality"""
-        try:
-            # Calculate quantity (same for both dry-run and real execution)
-            buying_power = await self.order_client.get_buying_power(account_id=self.config.account_id)
-            adjusted_qty = self.adjust_quantity_for_capital(
-                buying_power=buying_power,
-                entry_price=bracket.entry_price,
-                stop_loss_price=bracket.stop_loss_price,
-                risk_of_capital=self.config.risk_of_capital,
-                available_quantity_ratio=self.config.available_quantity_ratio
-            )
-
-            if adjusted_qty <= 0:
-                logger.info(
-                    f"Skipped {plan['symbol']}: insufficient capital for min quantity "
-                    f"(Required: {self.config.risk_of_capital * self.config.available_quantity_ratio})"
-                )
-                return
-
-            bracket.quantity = adjusted_qty
-
-            if self.config.dry_run:
-                # Dry-run specific handling (preserve all existing logging)
-                self.plan.mark_executed(plan['symbol'])
-                self.active_orders[plan['symbol']] = bracket
-                self.log_executed_order(plan, bracket, dry_run=True)
-                
-                logger.info(
-                    f"[DRY RUN] Would execute: {plan['symbol']} "
-                    f"Qty: {bracket.quantity} @ {bracket.entry_price} "
-                    f"(TP: {bracket.take_profit_price}, SL: {bracket.stop_loss_price})\n"
-                    f"Full plan: {plan}"  # Preserve original plan logging
-                )
-            else:
-                # Real execution (preserve all existing success handling)
-                result = await self.order_client.submit_bracket_order(
-                    bracket,
-                    account_id=self.config.account_id
-                )
-                
-                if result.success:
-                    self.plan.mark_executed(plan['symbol'])
-                    self.active_orders[plan['symbol']] = bracket
-                    self.log_executed_order(plan, bracket, dry_run=False)
-                    logger.info(f"Order executed: {result}")
-
-        except Exception as e:
-            # Preserve existing error handling
-            logger.error(f"Order failed for {plan['symbol']}: {e}", exc_info=True)    
-
+    
     def adjust_quantity_for_capital(
         self,
         buying_power: float,
@@ -194,39 +236,7 @@ class TradingManager:
             return 0
 
         return quantity
-
-    async def _simulate_bracket_order(self, plan: dict, current_price: float):
-        logger.info(
-            f"[DRY RUN] Would execute: {plan} at current price: {current_price}"
-        )
-
-        try:
-            bracket = BracketOrder.from_plan(plan)
-            bracket.quantity = self.adjust_quantity_for_capital(
-                buying_power=self.buying_power,
-                entry_price=bracket.entry_price,
-                stop_loss_price=bracket.stop_loss_price,
-                risk_of_capital=self.config.risk_of_capital,
-                available_quantity_ratio=self.config.available_quantity_ratio
-            )
-
-            if bracket.quantity <= 0:
-                logger.info(f"[DRY RUN] Skipped {plan['symbol']}: insufficient quantity")
-                return
-
-            self.plan.mark_executed(plan["symbol"])
-            bracket.entry_filled_price = current_price
-            self.active_orders[plan["symbol"]] = bracket
-            self.log_executed_order(plan, bracket, dry_run=True)
-
-            logger.info(
-                f"[DRY RUN] Simulated order placed for {plan['symbol']} "
-                f"at {current_price} with qty {bracket.quantity}"
-            )
-
-        except Exception as e:
-            logger.error(f"[DRY RUN] Failed to simulate order for {plan['symbol']}: {e}")
-
+    
     def log_executed_order(self, plan: dict, bracket: BracketOrder, dry_run: bool):
         """Log all executions (both dry-run and real)"""
         try:

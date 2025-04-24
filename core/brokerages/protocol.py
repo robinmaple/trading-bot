@@ -1,6 +1,7 @@
 from typing import Protocol, runtime_checkable
 from dataclasses import dataclass
-
+from typing import Literal, Optional
+from core.models import OrderStatus
 
 @runtime_checkable
 class PriceProtocol(Protocol):
@@ -27,6 +28,13 @@ class OrderProtocol(Protocol):
         """Return available buying power for trading"""
         ...
 
+    async def get_order_status(self, order_id: str) -> OrderStatus:
+        """Check current status of an order"""
+        ...
+        
+    async def get_execution_price(self, order_id: str) -> Optional[float]:
+        """Get average filled price for order"""
+        ...
 
 @runtime_checkable
 class BrokerageProtocol(Protocol):
