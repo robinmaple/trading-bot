@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.brokerages.protocol import OrderRequest
+
+# Rest of your code can use OrderRequest/FillReport as types
 from dataclasses import dataclass
 from .models import OrderRequest
 from typing import Optional 
-from core.pricing.service import MultiProviderPriceService
 
 @dataclass
 class BracketOrder:

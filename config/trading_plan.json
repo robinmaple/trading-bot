@@ -1,17 +1,29 @@
-[
-  {
+{
+  "AAPL": {
     "symbol": "AAPL",
-    "side": "Buy",
-    "entry": 205.00,
+    "side": "buy",
+    "entry": 205.0,
     "stop": 199.99,
-    "entry_type": "limit"
+    "take_profit": 185.0,
+    "quantity": 10,
+    "active": false,
+    "executed": true,
+    "executed_at": "2025-04-24T23:02:07.482397",
+    "execution_price": 205.0,
+    "executed_quantity": 45,
+    "committed_value": 9225.0
   },
-  {
+  "TSLA": {
     "symbol": "TSLA",
-    "side": "Buy",
-    "entry": 255,
+    "side": "sell",
+    "entry": 255.0,
     "stop": 249.59,
-    "entry_type": "limit"
+    "quantity": 5,
+    "active": false,
+    "executed": true,
+    "executed_at": "2025-04-24T23:02:07.718701",
+    "execution_price": 255.0,
+    "executed_quantity": 33,
+    "committed_value": 8415.0
   }
-]
- 
+}

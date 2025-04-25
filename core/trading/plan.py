@@ -1,4 +1,6 @@
 import json
+import os
+import shutil
 from pathlib import Path
 from typing import Dict, List, Union, Set
 from datetime import datetime
@@ -50,30 +52,6 @@ class TradingPlan:
             if plan.get('active', True) and symbol not in self.executed_plans
         }
 
-    def mark_executed(self, symbol: str, execution_price: float = None):
-        """Permanently mark plan as executed"""
-        if symbol not in self.plans:
-            logger.warning(f"Attempted to mark non-existent symbol {symbol} as executed")
-            return
-
-        self.executed_plans.add(symbol)
-        self.plans[symbol].update({
-            'active': False,
-            'executed': True,
-            'executed_at': datetime.now().isoformat(),
-            'execution_price': execution_price
-        })
-        logger.info(f"Marked {symbol} as executed at {execution_price}")
-
-    def save_to_file(self, path: str):
-        """Persist execution status to JSON file"""
-        try:
-            with open(path, 'w') as f:
-                json.dump(self.plans, f, indent=2)
-            logger.debug(f"Saved trading plans to {path}")
-        except Exception as e:
-            logger.error(f"Failed to save trading plans: {e}")
-
     def reset_execution_status(self, symbol: str):
         """Re-activate a previously executed plan (for testing/recovery)"""
         if symbol in self.executed_plans:
@@ -85,3 +63,41 @@ class TradingPlan:
                 'execution_price': None
             })
             logger.warning(f"Reset execution status for {symbol}")
+
+    def mark_executed(self, symbol: str, price: float, quantity: int):
+        """Records execution details with quantity"""
+        if symbol not in self.plans:
+            raise ValueError(f"Invalid symbol {symbol}")
+            
+        self.executed_plans.add(symbol)
+        self.plans[symbol].update({
+            'active': False,
+            'executed': True,
+            'executed_at': datetime.now().isoformat(),
+            'execution_price': price,
+            'executed_quantity': quantity,
+            'committed_value': price * quantity
+        })
+        
+    def save_to_file(self, path: str):
+        """Thread-safe file persistence"""
+        try:
+            # Create backup copy
+            backup_path = f"{path}.bak"
+            if os.path.exists(path):
+                shutil.copyfile(path, backup_path)
+
+            # Atomic write procedure
+            temp_path = f"{path}.tmp"
+            with open(temp_path, 'w') as f:
+                json.dump(self.plans, f, indent=2)
+            
+            os.replace(temp_path, path)
+            logger.info(f"Plans saved to {path}")
+
+        except Exception as e:
+            logger.error(f"Plan persistence failed: {e}")
+            # Attempt to restore backup
+            if os.path.exists(backup_path):
+                shutil.copyfile(backup_path, path)
+            raise

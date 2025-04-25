@@ -2,6 +2,7 @@ from typing import Protocol, runtime_checkable
 from dataclasses import dataclass
 from typing import Literal, Optional
 from core.models import OrderStatus
+from core.orders.bracket import BracketOrder
 
 @runtime_checkable
 class PriceProtocol(Protocol):
@@ -34,6 +35,10 @@ class OrderProtocol(Protocol):
         
     async def get_execution_price(self, order_id: str) -> Optional[float]:
         """Get average filled price for order"""
+        ...
+    
+    async def submit_bracket_order(self, bracket: BracketOrder, account_id: str) -> bool:
+        """Submit bracket order (entry + SL + TP)"""
         ...
 
 @runtime_checkable
