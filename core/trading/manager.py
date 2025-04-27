@@ -4,14 +4,18 @@ from datetime import datetime
 import time
 import asyncio
 import math
+
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Optional
 from core.logger import logger
 from core.orders.bracket import BracketOrder
 from core.brokerages.protocol import OrderProtocol, PriceProtocol
 from core.trading.plan import TradingPlan
 from config.env import DRY_RUN
+from core.storage.db import TradingDB
+from core.brokerages.questrade.auth import QuestradeAuth
+
 
 from config.env import (
     DRY_RUN,
@@ -34,13 +38,10 @@ class TradingManager:
     def __init__(
         self,
         order_client: OrderProtocol,
-        price_client: PriceProtocol,
-        plan_path: str = 'config/trading_plan.json'
+        price_client: PriceProtocol
     ):
         self.order_client = order_client
         self.price_client = price_client
-        self.config = TradingConfig()
-        self.plan = TradingPlan.load_from_file(plan_path)
         self.active_orders: Dict[str, BracketOrder] = {}
         self._capital_lock = asyncio.Lock()
         self.remaining_bp = 0.0
@@ -48,6 +49,11 @@ class TradingManager:
         self._capital_lock = asyncio.Lock()
         self.remaining_bp = 0.0
         self.committed_capital = 0.0  # Track total committed
+
+        self.db = TradingDB()
+        self._init_brokerage()  # Replace .env loading
+        self.config = TradingConfig()
+        self.auth = QuestradeAuth(self.db)  # Initialize auth
 
     async def run(self):
         """Main trading loop with execution tracking"""
@@ -65,42 +71,112 @@ class TradingManager:
             await self._process_plans()
             await asyncio.sleep(5)  # Reduced from 60 to catch executions faster    
         
-    async def _process_plans(self):
-        """Process plans with strict buying power enforcement"""
-        async with self._capital_lock:
-            # Get fresh buying power snapshot
-            total_bp = await self.order_client.get_buying_power(self.config.account_id)
-            used_bp = sum(
-                order.entry_price * order.quantity 
-                for order in self.active_orders.values()
-            )
-            self.remaining_bp = total_bp - used_bp
-
-            for symbol, plan in self.plan.get_active_plans().items():
-                try:
-                    # Price check and quantity calculation
-                    current_price = await self.price_client.get_price(symbol)
-                    bracket = BracketOrder.from_plan(plan, current_price)
-                    bracket.quantity = self._calculate_safe_quantity(bracket)
+    def _init_brokerage(self):
+        """Initialize brokerage connection from database"""
+        try:
+            with self.db._get_conn() as conn:
+                # Get brokerage config
+                brokerage = conn.execute("""
+                    SELECT name, token_url, api_endpoint, refresh_token 
+                    FROM brokerages 
+                    WHERE name = 'QUESTRADE'
+                """).fetchone()
+                
+                if not brokerage:
+                    raise ValueError("Questrade brokerage not configured")
                     
-                    # Hard stop if no BP remaining
-                    if self.remaining_bp <= 0:
-                        logger.warning(f"Insufficient BP for {symbol}, remaining: {self.remaining_bp}")
-                        break  # Not continue, to prevent order spamming
+                # Get primary account
+                account = conn.execute("""
+                    SELECT account_id, name 
+                    FROM accounts 
+                    WHERE brokerage_id = (
+                        SELECT id FROM brokerages WHERE name = 'QUESTRADE'
+                    )
+                """).fetchone()
+                
+                if not account:
+                    raise ValueError("No primary Questrade account configured")
+                
+                # Initialize TradingConfig properly
+                self.config = TradingConfig(
+                    account_id=account['account_id'],
+                    dry_run=DRY_RUN,
+                    close_buffer_minutes=CLOSE_TRADES_BUFFER_MINUTES,
+                    risk_of_capital=RISK_OF_CAPITAL,
+                    available_quantity_ratio=AVAILABLE_QUANTITY_RATIO
+                )
+                logger.info(f"Initialized brokerage for account {account['account_id']}")
+                
+        except Exception as e:
+            logger.critical(f"Brokerage initialization failed: {e}")
+            raise
+                    
+    async def _get_valid_quote(self, symbol: str, max_retries: int = 3) -> Optional[dict]:
+        """Get valid market quote with retries"""
+        for attempt in range(max_retries):
+            try:
+                response = await self.price_client.get_price(symbol)
+                if not response or 'quotes' not in response:
+                    logger.warning(f"No quote data for {symbol}")
+                    continue
 
-                    # Execute only if we can fully commit
-                    required_bp = bracket.entry_price * bracket.quantity
-                    if required_bp > self.remaining_bp:
-                        logger.warning(f"Rejected {symbol}: Needs {required_bp}, has {self.remaining_bp}")
-                        continue
+                quote = response['quotes'][0]
+                if not isinstance(quote, dict):
+                    logger.error(f"Invalid quote format for {symbol}")
+                    continue
 
-                    if await self._execute_plan_safely(plan, bracket):
-                        self.remaining_bp -= required_bp
-                        logger.info(f"Committed {required_bp} for {symbol}, Remaining BP: {self.remaining_bp}")
+                # Market status checks
+                if quote.get('isHalted', False):
+                    logger.warning(f"{symbol} trading is halted")
+                    return None
 
-                except Exception as e:
-                    logger.error(f"Plan processing failed for {symbol}: {e}")
+                last_price = quote.get('lastTradePrice')
+                if last_price is None:
+                    logger.warning(f"No last price for {symbol}")
+                    continue
 
+                # Check for stale data
+                last_trade_time = quote.get('lastTradeTime')
+                if last_trade_time:
+                    try:
+                        trade_time = datetime.fromisoformat(last_trade_time.rstrip('Z'))
+                        if (datetime.now() - trade_time).total_seconds() > 300:  # 5 minutes
+                            logger.warning(f"Stale data for {symbol} from {last_trade_time}")
+                            continue
+                    except ValueError:
+                        logger.warning(f"Invalid timestamp for {symbol}")
+
+                return quote
+
+            except Exception as e:
+                logger.warning(f"Quote attempt {attempt+1} failed for {symbol}: {str(e)}")
+                await asyncio.sleep(1)
+
+        logger.error(f"Could not get valid quote for {symbol} after {max_retries} attempts")
+        return None
+
+    async def _should_trade(self) -> bool:
+        """Check if market is open and active"""
+        now = datetime.now()
+        
+        # NYSE hours (9:30 AM to 4:00 PM ET, Monday-Friday)
+        if now.weekday() >= 5:  # Saturday or Sunday
+            logger.info("Weekend - markets closed")
+            return False
+            
+        # Convert ET to UTC (ET is UTC-4 or UTC-5 depending on DST)
+        et_hour = (now.hour - 4) % 24  # Simple UTC to ET conversion
+        if not (9 <= et_hour < 16):  # 9:30 AM-4:00 PM ET
+            logger.info(f"Outside market hours (ET time: {et_hour})")
+            return False
+            
+        # Additional checks could include:
+        # - Market holidays
+        # - Early closes
+        # - Current volatility
+        
+        return True
+    
     async def _execute_plan_safely(self, plan: dict, bracket: BracketOrder) -> bool:
         """Full implementation with all dependencies"""
         symbol = plan['symbol']
@@ -395,3 +471,300 @@ class TradingManager:
             logger.warning(f"Rolled back {symbol}")
         except Exception as e:
             logger.error(f"Failed to revert {symbol}: {e}")    
+
+    async def _execute_plan_with_db(self, plan: dict, bracket: BracketOrder) -> bool:
+        """Execute trade with full DB state tracking"""
+        account_id = self.config.get('ACCOUNT_ID')
+        symbol = plan['symbol']
+        
+        try:
+            # 1. Prepare execution data
+            execution_data = {
+                'planned_trade_id': plan.get('planned_trade_id'),
+                'account_id': account_id,
+                'symbol': symbol,
+                'entry_price': bracket.entry_price,
+                'quantity': bracket.quantity,
+                'stop_loss': bracket.stop_loss_price,
+                'take_profit': bracket.take_profit_price
+            }
+
+            # 2. Dry-run handling
+            if self.config.get('DRY_RUN') == 'TRUE':
+                with self.db._get_conn() as conn:
+                    conn.execute("""
+                        INSERT INTO executed_trades (
+                            planned_trade_id, account_id, symbol,
+                            actual_entry_price, actual_quantity, status,
+                            execution_time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        execution_data['planned_trade_id'],
+                        account_id,
+                        symbol,
+                        execution_data['entry_price'],
+                        execution_data['quantity'],
+                        'filled',
+                        datetime.now().isoformat()
+                    ))
+                return True
+
+            # 3. Live execution
+            result = await self.order_client.submit_bracket_order(
+                bracket=bracket,
+                account_id=account_id
+            )
+
+            # 4. Record execution
+            if result.success:
+                with self.db._get_conn() as conn:
+                    # Update positions
+                    conn.execute("""
+                        INSERT OR REPLACE INTO positions (
+                            account_id, symbol, quantity, entry_price
+                        ) VALUES (?, ?, ?, ?)
+                        ON CONFLICT(account_id, symbol) DO UPDATE SET
+                            quantity = quantity + excluded.quantity
+                    """, (
+                        account_id,
+                        symbol,
+                        execution_data['quantity'],
+                        execution_data['entry_price']
+                    ))
+                    
+                    # Record execution
+                    conn.execute("""
+                        INSERT INTO executed_trades (
+                            planned_trade_id, account_id, symbol,
+                            actual_entry_price, actual_quantity, fees,
+                            status, execution_time
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        execution_data['planned_trade_id'],
+                        account_id,
+                        symbol,
+                        execution_data['entry_price'],
+                        execution_data['quantity'],
+                        result.fees,
+                        'filled',
+                        datetime.now().isoformat()
+                    ))
+                    
+                return True
+                
+            return False
+
+        except Exception as e:
+            logger.error(f"DB execution failed for {symbol}: {e}")
+            # Revert position if partially executed
+            with self.db._get_conn() as conn:
+                conn.execute("""
+                    UPDATE positions
+                    SET quantity = quantity - ?
+                    WHERE account_id = ? AND symbol = ?
+                """, (
+                    execution_data['quantity'],
+                    account_id,
+                    symbol
+                ))
+            raise
+
+    async def load_plans(self, account_id: str) -> Dict[str, dict]:
+        """Load trading plans from database"""
+        plans = {}
+        try:
+            with self.db._get_conn() as conn:
+                active_plans = conn.execute("""
+                    SELECT pt.planned_trade_id, pt.symbol, pt.entry_price, 
+                        pt.stop_loss_price, pt.expiry_date
+                    FROM planned_trades pt
+                    LEFT JOIN executed_trades et ON pt.planned_trade_id = et.planned_trade_id
+                    WHERE pt.account_id = ?
+                    AND pt.expiry_date >= DATE('now')
+                    AND (et.status IS NULL OR et.status != 'filled')
+                """, (account_id,)).fetchall()
+
+                for plan in active_plans:
+                    plans[plan['symbol']] = {
+                        'symbol': plan['symbol'],
+                        'entry': plan['entry_price'],
+                        'stop_loss': plan['stop_loss_price'],
+                        'planned_trade_id': plan['planned_trade_id'],
+                        'expiry_date': plan['expiry_date']
+                    }
+        except Exception as e:
+            logger.error(f"Failed to load plans from database: {e}")
+            raise
+        
+        return plans
+    
+    async def _process_plans(self):
+        """Process trading plans with market status validation"""
+        async with self._capital_lock:
+            # Validate account
+            account_id = self.config.account_id
+            if not account_id:
+                logger.error("No account ID configured")
+                return
+
+            # 1. Get buying power
+            try:
+                total_bp = await self.order_client.get_buying_power(account_id)
+                logger.info(f"Buying power: {total_bp}")
+            except Exception as e:
+                logger.warning(f"BP API failed: {e}, using DB fallback")
+                with self.db._get_conn() as conn:
+                    total_bp = conn.execute(
+                        "SELECT bp_override FROM accounts WHERE account_id = ?",
+                        (account_id,)
+                    ).fetchone()[0] or 0
+
+            # 2. Calculate used BP from positions
+            with self.db._get_conn() as conn:
+                used_bp = conn.execute("""
+                    SELECT COALESCE(SUM(entry_price * quantity), 0)
+                    FROM positions
+                    WHERE account_id = ?
+                """, (account_id,)).fetchone()[0]
+            
+            self.remaining_bp = total_bp - used_bp
+
+            # 3. Check market status before proceeding
+            if not await self._should_trade():
+                logger.info("Market conditions not suitable for trading")
+                return
+
+            # 4. Process active plans from DB
+            with self.db._get_conn() as conn:
+                active_plans = conn.execute("""
+                    SELECT pt.planned_trade_id, pt.symbol, pt.entry_price, 
+                        pt.stop_loss_price, pt.expiry_date
+                    FROM planned_trades pt
+                    LEFT JOIN executed_trades et ON pt.planned_trade_id = et.planned_trade_id
+                    WHERE pt.account_id = ?
+                    AND pt.expiry_date >= DATE('now')
+                    AND (et.status IS NULL OR et.status != 'filled')
+                """, (account_id,)).fetchall()
+
+                for plan in active_plans:
+                    symbol = plan['symbol']
+                    try:
+                        logger.info(f"Processing {symbol}")
+
+                        # Validate required prices
+                        if None in [plan['entry_price'], plan['stop_loss_price']]:
+                            logger.error(f"Missing prices for {symbol}")
+                            continue
+
+                        # Get market data
+                        quote = await self._get_valid_quote(symbol)
+                        if not quote:
+                            continue
+
+                        # Convert and validate prices
+                        try:
+                            entry_price = float(plan['entry_price'])
+                            stop_loss = float(plan['stop_loss_price'])
+                            current_price = float(quote['lastTradePrice'])
+                        except (TypeError, ValueError) as e:
+                            logger.error(f"Price conversion failed for {symbol}: {e}")
+                            continue
+
+                        if entry_price <= stop_loss:
+                            logger.error(f"Invalid prices for {symbol}: entry {entry_price} <= stop {stop_loss}")
+                            continue
+
+                        # Create and execute order
+                        legacy_plan = {
+                            'symbol': symbol,
+                            'entry': entry_price,
+                            'stop_loss': stop_loss,
+                            'planned_trade_id': plan['planned_trade_id']
+                        }
+
+                        try:
+                            bracket = BracketOrder.from_plan(legacy_plan, current_price)
+                            bracket.quantity = self._calculate_safe_quantity(bracket)
+                        except Exception as e:
+                            logger.error(f"Bracket creation failed for {symbol}: {e}")
+                            continue
+
+                        # BP check
+                        required_bp = bracket.entry_price * bracket.quantity
+                        if self.remaining_bp < required_bp:
+                            logger.warning(f"Insufficient BP for {symbol}")
+                            continue
+
+                        if await self._execute_plan_with_db(legacy_plan, bracket):
+                            self.remaining_bp -= required_bp
+                            logger.info(f"Executed {symbol}")
+
+                    except Exception as e:
+                        logger.error(f"Plan failed for {symbol}: {str(e)}")
+                        continue
+
+    async def _get_valid_quote(self, symbol: str, max_retries: int = 3) -> Optional[dict]:
+        """Get valid market quote with retries"""
+        for attempt in range(max_retries):
+            try:
+                response = await self.price_client.get_price(symbol)
+                if not response or 'quotes' not in response:
+                    logger.warning(f"No quote data for {symbol}")
+                    continue
+
+                quote = response['quotes'][0]
+                if not isinstance(quote, dict):
+                    logger.error(f"Invalid quote format for {symbol}")
+                    continue
+
+                # Market status checks
+                if quote.get('isHalted', False):
+                    logger.warning(f"{symbol} trading is halted")
+                    return None
+
+                last_price = quote.get('lastTradePrice')
+                if last_price is None:
+                    logger.warning(f"No last price for {symbol}")
+                    continue
+
+                # Check for stale data
+                last_trade_time = quote.get('lastTradeTime')
+                if last_trade_time:
+                    try:
+                        trade_time = datetime.fromisoformat(last_trade_time.rstrip('Z'))
+                        if (datetime.now() - trade_time).total_seconds() > 300:  # 5 minutes
+                            logger.warning(f"Stale data for {symbol} from {last_trade_time}")
+                            continue
+                    except ValueError:
+                        logger.warning(f"Invalid timestamp for {symbol}")
+
+                return quote
+
+            except Exception as e:
+                logger.warning(f"Quote attempt {attempt+1} failed for {symbol}: {str(e)}")
+                await asyncio.sleep(1)
+
+        logger.error(f"Could not get valid quote for {symbol} after {max_retries} attempts")
+        return None
+
+    async def _should_trade(self) -> bool:
+        """Check if market is open and active"""
+        now = datetime.now()
+        
+        # NYSE hours (9:30 AM to 4:00 PM ET, Monday-Friday)
+        if now.weekday() >= 5:  # Saturday or Sunday
+            logger.info("Weekend - markets closed")
+            return False
+            
+        # Convert ET to UTC (ET is UTC-4 or UTC-5 depending on DST)
+        et_hour = (now.hour - 4) % 24  # Simple UTC to ET conversion
+        if not (9 <= et_hour < 16):  # 9:30 AM-4:00 PM ET
+            logger.info(f"Outside market hours (ET time: {et_hour})")
+            return False
+            
+        # Additional checks could include:
+        # - Market holidays
+        # - Early closes
+        # - Current volatility
+        
+        return True    
