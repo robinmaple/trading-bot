@@ -3,7 +3,6 @@ from typing import List, Tuple
 from dotenv import load_dotenv
 from core.config import Config
 config = Config()
-# load_dotenv()
 
 def _parse_trading_hours(hours_str: str) -> List[Tuple[str, str]]:
     """Parse TRADING_HOURS into list of (start, end) tuples."""
@@ -37,7 +36,7 @@ MONTHLY_LOSS_LIMIT_PERCENT = config.get("MONTHLY_LOSS_LIMIT_PERCENT")
 
 # Session Management
 CLOSE_TRADES_BUFFER_MINUTES = config.get("CLOSE_TRADES_BUFFER_MINUTES")
-TRADING_HOURS = _parse_trading_hours(os.getenv("TRADING_HOURS", "9:30-23:59"))
+# TRADING_HOURS = _parse_trading_hours(os.getenv("TRADING_HOURS", "9:30-23:59"))
 
 # Validation
 assert 0 < RISK_OF_CAPITAL <= 1, "RISK_OF_CAPITAL must be between 0 and 1"
