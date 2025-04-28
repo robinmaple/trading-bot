@@ -27,9 +27,30 @@ INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
 
 -- Insert Brokerages
 SELECT 'Inserting brokerages' AS message;
-INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
-('QUESTRADE', 'https://login.questrade.com/oauth2/token', 'https://api.questrade.com', 'B-mtz8jXuyscfPX0HNkNn0rZRg_xK5mC0'),
-('IBKR', 'https://api.ibkr.com/v1/api/oauth/token', 'https://api.ibkr.com/v1/api', '');
+-- Updated brokerage inserts (with placeholder encrypted values)
+INSERT OR REPLACE INTO brokerages 
+(name, token_url, api_endpoint, auth_type, refresh_token, client_id, client_secret) VALUES
+('QUESTRADE', 
+ 'https://login.questrade.com/oauth2/token', 
+ 'https://api.questrade.com',
+ 'authorization_code',
+ 'enc:B-mtz8jXuyscfPX0HNkNn0rZRg_xK5mC0',  -- Encrypted refresh token
+ NULL,  -- client_id not used
+ NULL   -- client_secret not used
+),
+
+('IBKR', 
+ 'https://api.ibkr.com/v1/api/oauth/token', 
+ 'https://api.ibkr.com/v1/api',
+ 'client_credentials',
+ NULL,  -- refresh_token not used
+ 'enc:GHI789',  -- Encrypted client ID
+ 'enc:JKL012'   -- Encrypted client secret
+);
+
+-- Add encryption key (in production, this would be set separately)
+INSERT OR REPLACE INTO encryption_keys (key_name, key_value) VALUES
+('brokerage_creds', 'ynWEx7-zaEW_jEheb9noHCOZw9qXuBHrO0WuWE_kBK9A=');
 
 -- Insert Accounts
 SELECT 'Inserting accounts' AS message;
@@ -37,6 +58,12 @@ INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
 ('27348656', 
  (SELECT id FROM brokerages WHERE name = 'QUESTRADE'), 
  'MARGIN');
+
+INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
+('U20131583', 
+ (SELECT id FROM brokerages WHERE name = 'IBKR'), 
+ 'MARGIN');
+
 
 -- Insert Plan
 SELECT 'Inserting trading plan' AS message;

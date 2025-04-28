@@ -11,20 +11,26 @@ CREATE TABLE IF NOT EXISTS config (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Brokerages
+-- Updated brokerages table with flexible credential storage
 CREATE TABLE IF NOT EXISTS brokerages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     token_url TEXT,
-    refresh_token TEXT,
-    last_token_update TIMESTAMP,
     api_endpoint TEXT,
+    -- Authentication fields (all encrypted)
+    client_id TEXT,        -- For IBKR, TD Ameritrade, etc.
+    client_secret TEXT,    -- For IBKR, TD Ameritrade, etc.
+    api_key TEXT,          -- For Alpaca, etc.
+    refresh_token TEXT,    -- For Questrade, TD Ameritrade, etc.
+    access_token TEXT,
+    -- Metadata
+    auth_type TEXT NOT NULL CHECK(auth_type IN ('client_credentials', 'authorization_code', 'api_key')),
     token_expiry TIMESTAMP,
-    last_refresh TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_token_update TIMESTAMP,
+    credentials_encrypted BOOLEAN DEFAULT 1,
     is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
@@ -92,4 +98,13 @@ CREATE TABLE IF NOT EXISTS positions (
     PRIMARY KEY (account_id, symbol),
     FOREIGN KEY (account_id) REFERENCES accounts(account_id),
     FOREIGN KEY (planned_trade_id) REFERENCES planned_trades(trade_id)
+);
+
+-- New encryption key table
+CREATE TABLE IF NOT EXISTS encryption_keys (
+    key_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key_name TEXT NOT NULL UNIQUE,
+    key_value TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used TIMESTAMP
 );

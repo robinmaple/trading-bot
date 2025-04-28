@@ -1,46 +1,48 @@
-import requests
-from typing import Optional, Dict
+# core/brokerages/ibkr/auth.py
+from core.brokerages.auth.base import BaseBrokerageAuth
 from core.logger import logger
-from core.config.manager import config
+import requests, time
 
-class IBKRAuth:
-    """Handles authentication with Interactive Brokers API."""
-    
-    def __init__(self, client_id: str, client_secret: str):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.api_server = config.get("IBKR_API_ENDPOINT", "https://api.ibkr.com/v1/api/")
-        self.access_token: Optional[str] = None
-        self.refresh_token: Optional[str] = None
-
-    def create_session(self) -> requests.Session:
-        """Create and return an authenticated session."""
-        session = requests.Session()
+class IBKRAuth(BaseBrokerageAuth):
+    def __init__(self, db=None, **kwargs):
+        self.brokerage_name = 'IBKR'
+        super().__init__(db, **kwargs)
         
-        if not self.access_token:
-            self._refresh_access_token()
-            
-        session.headers.update({
-            "Authorization": f"Bearer {self.access_token}",
-            "Content-Type": "application/json"
-        })
-        return session
+        if db:
+            config = self._load_db_config(db, self.brokerage_name)
+            self.token_url = config['token_url']
+            self.client_id = config['client_id']
+            self.client_secret = config['client_secret']
+            self.api_server = config['api_server']
+        else:
+            self.token_url = kwargs['token_url']
+            self.client_id = kwargs['client_id']
+            self.client_secret = kwargs['client_secret']
+            self.api_server = kwargs['api_server']
 
-    def _refresh_access_token(self) -> None:
-        """Refresh the OAuth access token."""
-        token_url = config.get("IBKR_TOKEN_URL", "https://api.ibkr.com/v1/api/oauth/token")
+    def _load_db_config(self, db, brokerage_name) -> dict:
+        result = db.execute("""
+            SELECT token_url, client_id, client_secret, api_endpoint
+            FROM brokerages
+            WHERE name = ?
+        """, (brokerage_name,)).fetchone()
         
-        auth = (self.client_id, self.client_secret)
-        data = {
-            "grant_type": "client_credentials",
-            "scope": "read write"
+        return {
+            'token_url': result['token_url'],
+            'client_id': result['client_id'],
+            'client_secret': result['client_secret'],
+            'api_server': result['api_endpoint']
         }
+
+    def _refresh_tokens(self) -> None:
+        """IBKR-specific token refresh"""
+        response = requests.post(
+            self.token_url,
+            auth=(self.client_id, self.client_secret),
+            data={'grant_type': 'client_credentials'}
+        )
+        response.raise_for_status()
+        data = response.json()
         
-        response = requests.post(token_url, auth=auth, data=data)
-        if response.status_code != 200:
-            raise RuntimeError(f"Failed to authenticate with IBKR: {response.text}")
-            
-        token_data = response.json()
-        self.access_token = token_data["access_token"]
-        self.refresh_token = token_data.get("refresh_token", "")
-        logger.info("Successfully authenticated with IBKR API")
+        self.access_token = data['access_token']
+        self.expiry_time = time.time() + data['expires_in']

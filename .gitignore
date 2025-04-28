@@ -12,3 +12,5 @@ venv/
 env/
 
 data/trading.db
+core/storage/init_data.sql
+

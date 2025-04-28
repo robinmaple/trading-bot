@@ -1,26 +1,74 @@
 import requests
 import time
 from threading import Lock
-from datetime import datetime, timedelta
-from typing import Optional
 from core.logger import logger, redact_sensitive
-from core.storage.db import TradingDB
+from core.brokerages.auth.base import BaseBrokerageAuth
 
-class QuestradeAuth:
-    def __init__(self, db: TradingDB):
+class QuestradeAuth(BaseBrokerageAuth):
+    def __init__(self, db=None, **kwargs):
         self.lock = Lock()
-        self.db = db
         self.brokerage_name = 'QUESTRADE'
-
-        # Load initial tokens and URLs from database
-        self.token_url, self.refresh_token, self.api_server = self._load_brokerage_info()
+        super().__init__(db, **kwargs)
+        
+        if db:  # DB initialization path
+            self.token_url, self.refresh_token, self.api_server = self._load_brokerage_info()
+        else:   # Direct initialization path
+            self.token_url = kwargs['token_url']
+            self.refresh_token = kwargs['refresh_token']
+            self.api_server = kwargs['api_server']
+            
         logger.info(f"Using refresh_token: {redact_sensitive(self.refresh_token)}")
 
-        self.access_token: Optional[str] = None
-        self.expiry_time: float = 0
+    def _load_db_config(self, db, brokerage_name) -> dict:
+        """Load from DB - now returns dict instead of tuple"""
+        result = db.execute("""
+            SELECT token_url, refresh_token, api_endpoint 
+            FROM brokerages 
+            WHERE name = ?
+        """, (brokerage_name,)).fetchone()
 
-        if not self.refresh_token or not self.token_url:
-            raise ValueError("Brokerage info missing in database")
+        if not result:
+            raise ValueError(f"Brokerage {brokerage_name} not found in database")
+
+        return {
+            'token_url': result['token_url'],
+            'refresh_token': result['refresh_token'],
+            'api_server': result['api_endpoint']
+        }
+
+    def _refresh_tokens(self) -> None:
+        """Refresh tokens - now uses self._config if needed"""
+        with self.lock:
+            logger.debug(f"Refreshing tokens via {self.token_url}")
+            response = requests.post(
+                f"{self.token_url}?grant_type=refresh_token",
+                params={'refresh_token': self.refresh_token}
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            # Update tokens
+            self.access_token = data['access_token']
+            self.refresh_token = data['refresh_token']
+            self.api_server = data['api_server']
+            self.expiry_time = time.time() + data['expires_in']
+
+            # Persist if using DB
+            if self.db:
+                self._save_tokens()
+
+    def _save_tokens(self) -> None:
+        """DB-specific save logic"""
+        with self.db._get_conn() as conn:
+            conn.execute("""
+                UPDATE brokerages 
+                SET refresh_token = ?, api_endpoint = ?
+                WHERE name = ?
+            """, (
+                self.refresh_token,
+                self.api_server,
+                self.brokerage_name
+            ))
 
     def _load_brokerage_info(self) -> tuple[str, str, str]:
         """Loads token_url, refresh_token, and api_server from database."""
@@ -36,38 +84,6 @@ class QuestradeAuth:
 
             return result['token_url'], result['refresh_token'], result['api_endpoint']
 
-    def _refresh_tokens(self) -> None:
-        """Refreshes access_token and updates expiry."""
-        with self.lock:
-            logger.debug(f"Refreshing tokens via {self.token_url}")
-            response = requests.post(
-                f"{self.token_url}?grant_type=refresh_token",
-                params={'refresh_token': self.refresh_token}
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            # Update in-memory tokens
-            self.access_token = data['access_token']
-            self.refresh_token = data['refresh_token']  # New refresh token
-            self.api_server = data['api_server']  # Sometimes it's 'api_server' or 'api_endpoint' depending on API
-            self.expiry_time = time.time() + data['expires_in']
-
-            # Persist the new tokens
-            self._save_tokens()
-
-    def _save_tokens(self) -> None:
-        """Persists updated tokens to database."""
-        with self.db._get_conn() as conn:
-            conn.execute("""
-                UPDATE brokerages 
-                SET refresh_token = ?, api_endpoint = ?
-                WHERE name = ?
-            """, (
-                self.refresh_token,
-                self.api_server,
-                self.brokerage_name
-            ))
 
     def get_valid_token(self) -> str:
         """Returns a valid access_token, refreshing if needed."""

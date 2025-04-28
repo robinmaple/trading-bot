@@ -1,8 +1,10 @@
 from typing import Protocol, runtime_checkable
+from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Optional, Dict
 from core.models import OrderStatus
 from core.orders.bracket import BracketOrder
+
 
 @runtime_checkable
 class PriceProtocol(Protocol):
@@ -48,6 +50,20 @@ class BrokerageProtocol(Protocol):
     async def connect(self) -> bool:
         """Establish connection to brokerage."""
         ...
+
+    @abstractmethod
+    async def submit_bracket_order(self, bracket: BracketOrder) -> Dict:
+        """Submit a bracket order (entry + take profit + stop loss).
+        
+        Should first attempt native implementation if available,
+        then fall back to generic implementation if needed.
+        """
+        pass
+
+    @property
+    def supports_native_bracket(self) -> bool:
+        """Whether this brokerage supports native bracket orders."""
+        return False  # Default to False, brokerages can override
 
 
 # Shared data models (minimal, extend as needed)
