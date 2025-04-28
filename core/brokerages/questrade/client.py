@@ -3,7 +3,7 @@ from dataclasses import asdict
 from ..protocol import PriceProtocol, OrderProtocol, OrderRequest, FillReport
 from .auth import QuestradeAuth
 from core.logger import logger
-from config.env import DRY_RUN
+from core.config.manager import config
 
 class QuestradeClient(PriceProtocol, OrderProtocol):
     """Questrade implementation of the brokerage protocols."""
@@ -56,7 +56,7 @@ class QuestradeClient(PriceProtocol, OrderProtocol):
     # --- OrderProtocol Implementation ---
     async def submit_order(self, order: OrderRequest) -> FillReport:
         """Submits an order via Questrade API or simulates it if in Dry Run mode."""
-        if DRY_RUN:
+        if config.get("DRY_RUN"):
             logger.info(f"[DRY RUN] Would submit order: {order}")
             return FillReport(
                 order_id="DRYRUN123",

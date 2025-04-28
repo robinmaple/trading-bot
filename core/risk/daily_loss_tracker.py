@@ -1,4 +1,5 @@
 from core.logger import logger
+from core.config.manager import config
 
 class DailyLossTracker:
     def __init__(self):
@@ -6,8 +7,7 @@ class DailyLossTracker:
         self.limit_percent = 2.0  # Default
         
         try:
-            from config.env import DAILY_LOSS_LIMIT_PERCENT
-            self.limit_percent = float(DAILY_LOSS_LIMIT_PERCENT)
+            self.limit_percent = float(config.get("daily_loss_limit_percent"))
         except ImportError:
             pass
     

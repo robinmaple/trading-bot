@@ -3,14 +3,14 @@ BEGIN TRANSACTION;
 
 -- Global Config
 INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
-('DRY_RUN', 'TRUE', 'bool', 'Execute trades in test mode'),
-('RISK_OF_CAPITAL', '0.5', 'float', '% of capital to risk per trade'),
-('PROFIT_TO_LOSS_RATIO', '2', 'float', 'Reward/risk ratio'),
-('AVAILABLE_QUANTITY_RATIO', '0.5', 'float', '% of calculated position size to trade'),
-('DAILY_LOSS_LIMIT_PERCENT', '2', 'float', 'Cease trading if daily loss reaches this %'),
-('WEEKLY_LOSS_LIMIT_PERCENT', '5', 'float', 'Cease trading if weekly loss reaches this %'),
-('MONTHLY_LOSS_LIMIT_PERCENT', '10', 'float', 'Cease trading if monthly loss reaches this %'),
-('CLOSE_TRADES_BUFFER_MINUTES', '5', 'int', 'Minutes before close to start position closing');
+('dry_run', 'TRUE', 'bool', 'Test mode without real trades'),
+('risk_of_capital', '0.01', 'float', 'Max % of capital to risk per trade (0.01 = 1%)'),
+('profit_to_loss_ratio', '2', 'float', 'Minimum profit target as multiple of risk'),
+('available_quantity_ratio', '0.8', 'float', 'Max % of calculated position size to take'),
+('daily_loss_limit_percent', '2', 'float', 'Max daily loss before pausing (2%)'),
+('weekly_loss_limit_percent', '5', 'float', 'Max weekly loss before pausing (5%)'),
+('monthly_loss_limit_percent', '10', 'float', 'Max monthly loss before pausing (10%)'),
+('close_trades_buffer_minutes', '5', 'int', 'Minutes before market close to exit trades');
 
 -- Questrade Brokerage
 INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
@@ -24,14 +24,14 @@ INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
 
 -- Add sample trading plan
 
--- Insert the main plan
-INSERT INTO plans (upload_time) VALUES (datetime('now'));
+-- Insert the main plan with account_id
+INSERT INTO plans (account_id, upload_time) 
+VALUES ('27348656', datetime('now'));  -- Account ID at plan level
 
 -- Get the last inserted plan_id
--- Note: In SQLite, last_insert_rowid() gets the last autoincrement ID
+-- Insert trades without account_id (inherited from plan)
 INSERT INTO planned_trades (
     plan_id,
-    account_id,
     symbol,
     entry_price,
     stop_loss_price,
@@ -40,7 +40,6 @@ INSERT INTO planned_trades (
     -- AAPL trade (using last_insert_rowid() for plan_id)
     (
         last_insert_rowid(),
-        '27348656',  -- Replace with actual account ID
         'AAPL',
         205.0,
         199.99,
@@ -49,7 +48,6 @@ INSERT INTO planned_trades (
     -- TSLA trade (same plan_id since they're part of the same plan)
     (
         last_insert_rowid(),
-        '27348656',  -- Replace with actual account ID
         'TSLA',
         255.0,
         249.59,

@@ -1,13 +1,15 @@
+
 -- core/storage/schema.sql
--- Fixed schema with proper syntax
+-- Fixed schema with proper SQLite syntax
 
 -- Global Configuration
 CREATE TABLE IF NOT EXISTS config (
     config_id INTEGER PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL UNIQUE,
     value TEXT NOT NULL,
-    value_type TEXT CHECK(value_type IN ('bool', 'float', 'int', 'str')) DEFAULT 'str',
-    description TEXT
+    value_type TEXT NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Brokerages
@@ -19,8 +21,11 @@ CREATE TABLE IF NOT EXISTS brokerages (
     last_token_update TIMESTAMP,
     api_endpoint TEXT,
     token_expiry TIMESTAMP,
-    last_refresh TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    last_refresh TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Accounts
 CREATE TABLE IF NOT EXISTS accounts (
@@ -28,58 +33,36 @@ CREATE TABLE IF NOT EXISTS accounts (
     brokerage_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     bp_override REAL,
-    FOREIGN KEY (brokerage_id) REFERENCES brokerages(id),
+    risk_per_trade REAL DEFAULT 0.01,
+    is_active BOOLEAN DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (brokerage_id) REFERENCES brokerages(id) ON DELETE CASCADE,
     UNIQUE(brokerage_id, name)
 );
+
 
 -- Trading Plans
 CREATE TABLE IF NOT EXISTS plans (
     plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    upload_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    account_id TEXT NOT NULL,
+    name TEXT,
+    description TEXT,
+    upload_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry_time DATETIME,
+    status TEXT CHECK(status IN ('pending', 'active', 'completed', 'canceled')) DEFAULT 'pending',
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
 );
 
 -- Planned Trades
 CREATE TABLE IF NOT EXISTS planned_trades (
-    planned_trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL,
-    account_id TEXT NOT NULL,
     symbol TEXT NOT NULL,
     entry_price REAL,
     stop_loss_price REAL,
-    expiry_date DATE,
-    FOREIGN KEY (plan_id) REFERENCES plans(plan_id),
-    FOREIGN KEY (account_id) REFERENCES accounts(account_id)
+    take_profit_price REAL,
+    quantity INTEGER,
+    expiry_date TEXT,
+    status TEXT CHECK(status IN ('pending', 'ready', 'executed', 'canceled')) DEFAULT 'pending',
+    FOREIGN KEY (plan_id) REFERENCES plans(plan_id) ON DELETE CASCADE
 );
-
--- Executed Trades
-CREATE TABLE IF NOT EXISTS executed_trades (
-    trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    planned_trade_id INTEGER NOT NULL,
-    actual_entry_price REAL NOT NULL,
-    actual_quantity INTEGER NOT NULL,
-    fees REAL DEFAULT 0,
-    status TEXT CHECK(status IN ('filled', 'partial', 'canceled')) NOT NULL,
-    execution_time TIMESTAMP NOT NULL,
-    close_time TIMESTAMP,
-    close_reason TEXT CHECK(close_reason IN ('SL', 'TP', 'EOD', 'MANUAL')),
-    pnl REAL,
-    FOREIGN KEY (planned_trade_id) REFERENCES planned_trades(planned_trade_id)
-);
-
--- Positions
-CREATE TABLE IF NOT EXISTS positions (
-    account_id TEXT NOT NULL,
-    symbol TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    entry_price REAL NOT NULL,
-    entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    planned_trade_id INTEGER,
-    PRIMARY KEY (account_id, symbol),
-    FOREIGN KEY (account_id) REFERENCES accounts(account_id),
-    FOREIGN KEY (planned_trade_id) REFERENCES planned_trades(planned_trade_id)
-);
-
--- Indexes
-CREATE INDEX IF NOT EXISTS idx_planned_account ON planned_trades(account_id);
-CREATE INDEX IF NOT EXISTS idx_planned_expiry ON planned_trades(expiry_date);
-CREATE INDEX IF NOT EXISTS idx_positions_account ON positions(account_id);

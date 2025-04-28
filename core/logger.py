@@ -1,7 +1,6 @@
 # logger.py
 import logging
 from pathlib import Path
-from config.settings import BASE_DIR
 
 def setup_logger(debug=False):
     """Configure logger with optional debug mode"""
@@ -12,7 +11,6 @@ def setup_logger(debug=False):
         level=level,
         format=log_format,
         handlers=[
-            logging.FileHandler(BASE_DIR / 'questrade.log'),
             logging.StreamHandler()
         ]
     )

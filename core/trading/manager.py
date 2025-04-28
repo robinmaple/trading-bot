@@ -7,56 +7,63 @@ import math
 
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from core.logger import logger
 from core.orders.bracket import BracketOrder
 from core.brokerages.protocol import OrderProtocol, PriceProtocol
-from core.trading.plan import TradingPlan
-from config.env import DRY_RUN
+from core.config.manager import config
 from core.storage.db import TradingDB
 from core.brokerages.questrade.auth import QuestradeAuth
-
-
-from config.env import (
-    DRY_RUN,
-    ACCOUNT_ID,
-    CLOSE_TRADES_BUFFER_MINUTES,
-    RISK_OF_CAPITAL,
-    AVAILABLE_QUANTITY_RATIO
-)
-
-@dataclass
-class TradingConfig:
-    dry_run: bool = DRY_RUN
-    account_id: str = ACCOUNT_ID
-    close_buffer_minutes: int = CLOSE_TRADES_BUFFER_MINUTES
-    risk_of_capital: float = RISK_OF_CAPITAL
-    available_quantity_ratio: float = AVAILABLE_QUANTITY_RATIO
-    persist_dry_run: bool = False  # Add this new field
 
 class TradingManager:
     def __init__(
         self,
         order_client: OrderProtocol,
-        price_client: PriceProtocol
+        price_client: PriceProtocol,
+        db: Optional[TradingDB] = None
     ):
         self.order_client = order_client
         self.price_client = price_client
+        self.db = db or TradingDB()
+
+        # Configuration setup
+        from core.config.manager import config
+        self.config = config
+
+        # Runtime properties
         self.active_orders: Dict[str, BracketOrder] = {}
         self._capital_lock = asyncio.Lock()
         self.remaining_bp = 0.0
+        self.committed_capital = 0.0
 
-        self._capital_lock = asyncio.Lock()
-        self.remaining_bp = 0.0
-        self.committed_capital = 0.0  # Track total committed
+        # Initialize brokerage
+        self._init_brokerage()
 
-        self.db = TradingDB()
-        self._init_brokerage()  # Replace .env loading
-        self.config = TradingConfig()
-        self.auth = QuestradeAuth(self.db)  # Initialize auth
+    # Property accessors for easy config use
+    @property
+    def dry_run(self) -> bool:
+        return self.config.get('dry_run')
+
+    @property
+    def risk_of_capital(self) -> float:
+        return self.config.get('risk_of_capital')
+
+    @property
+    def available_quantity_ratio(self) -> float:
+        return self.config.get('available_quantity_ratio')
+
+    @property
+    def close_buffer_minutes(self) -> int:
+        return self.config.get('close_trades_buffer_minutes')
 
     async def run(self):
         """Main trading loop with execution tracking"""
+        try:
+            await self.validate_config()
+        except ValueError as e:
+            logger.critical(f"Configuration error: {e}")
+            return
+            
         logger.info("Starting trading manager with execution tracking")
         
         while True:
@@ -64,13 +71,10 @@ class TradingManager:
                 await asyncio.sleep(60)
                 continue
             
-            # Verify existing orders first
             await self.verify_active_orders()
-            
-            # Process new plans
             await self._process_plans()
-            await asyncio.sleep(5)  # Reduced from 60 to catch executions faster    
-        
+            await asyncio.sleep(5)
+
     def _init_brokerage(self):
         """Initialize brokerage connection from database"""
         try:
@@ -92,25 +96,20 @@ class TradingManager:
                     WHERE brokerage_id = (
                         SELECT id FROM brokerages WHERE name = 'QUESTRADE'
                     )
+                    AND is_active = 1
+                    ORDER BY created_at
+                    LIMIT 1
                 """).fetchone()
                 
                 if not account:
-                    raise ValueError("No primary Questrade account configured")
+                    raise ValueError("No active Questrade account configured")
                 
-                # Initialize TradingConfig properly
-                self.config = TradingConfig(
-                    account_id=account['account_id'],
-                    dry_run=DRY_RUN,
-                    close_buffer_minutes=CLOSE_TRADES_BUFFER_MINUTES,
-                    risk_of_capital=RISK_OF_CAPITAL,
-                    available_quantity_ratio=AVAILABLE_QUANTITY_RATIO
-                )
                 logger.info(f"Initialized brokerage for account {account['account_id']}")
                 
         except Exception as e:
             logger.critical(f"Brokerage initialization failed: {e}")
             raise
-                    
+
     async def _get_valid_quote(self, symbol: str, max_retries: int = 3) -> Optional[dict]:
         """Get valid market quote with retries"""
         for attempt in range(max_retries):
@@ -768,3 +767,84 @@ class TradingManager:
         # - Current volatility
         
         return True    
+    
+    async def validate_config(self):
+        """Verify all required config values are set and valid"""
+        required_config = {
+            'dry_run': {
+                'type': bool,
+                'default': False,
+                'validator': lambda x: isinstance(x, bool)
+            },
+            'risk_of_capital': {
+                'type': float,
+                'default': 0.01,
+                'validator': lambda x: 0 < x <= 0.1  # 0-10% risk
+            },
+            'profit_to_loss_ratio': {
+                'type': float, 
+                'default': 2.0,
+                'validator': lambda x: x >= 1.0  # At least 1:1 ratio
+            },
+            'available_quantity_ratio': {
+                'type': float,
+                'default': 0.5,
+                'validator': lambda x: 0 < x <= 1.0
+            },
+            'daily_loss_limit_percent': {
+                'type': float,
+                'default': 2.0,
+                'validator': lambda x: 0 < x <= 5.0
+            },
+            'weekly_loss_limit_percent': {
+                'type': float,
+                'default': 5.0,
+                'validator': lambda x: 0 < x <= 10.0
+            },
+            'monthly_loss_limit_percent': {
+                'type': float,
+                'default': 10.0,
+                'validator': lambda x: 0 < x <= 20.0
+            },
+            'close_trades_buffer_minutes': {
+                'type': int,
+                'default': 5,
+                'validator': lambda x: 1 <= x <= 30
+            }
+        }
+
+        errors = []
+        warnings = []
+        
+        for key, spec in required_config.items():
+            value = self.config.get(key)
+            
+            # Set default if not configured
+            if value is None:
+                warnings.append(f"Using default {key}={spec['default']}")
+                value = spec['default']
+                self._cache[key] = value  # Cache the default
+                
+            # Type checking
+            try:
+                if spec['type'] == bool and not isinstance(value, bool):
+                    value = str(value).lower() in ('true', '1', 't')
+                elif spec['type'] == int:
+                    value = int(value)
+                elif spec['type'] == float:
+                    value = float(value)
+            except (ValueError, TypeError):
+                errors.append(f"Invalid type for {key}, expected {spec['type'].__name__}")
+                continue
+                
+            # Validation
+            if not spec['validator'](value):
+                errors.append(f"Invalid value {value} for {key}")
+                
+        # Report issues
+        if warnings:
+            logger.warning("Config warnings:\n" + "\n".join(warnings))
+        if errors:
+            raise ValueError("Config errors:\n" + "\n".join(errors))
+            
+        logger.info("All configuration values validated successfully")

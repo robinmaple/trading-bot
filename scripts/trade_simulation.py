@@ -3,9 +3,6 @@ from core.brokerages.questrade.auth import QuestradeAuth
 from core.brokerages.questrade.client import QuestradeClient
 from core.pricing.service import MultiProviderPriceService
 from core.trading.manager import TradingManager
-from config import settings
-from core.config import Config
-config = Config()
 from core.storage.db import TradingDB
 
 async def main():

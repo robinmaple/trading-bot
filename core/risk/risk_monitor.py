@@ -7,13 +7,7 @@ from typing import Dict, Literal
 from core.models import PeriodType
 from dataclasses import dataclass
 from core.logger import logger
-
-from config.env import (
-    DAILY_LOSS_LIMIT_PERCENT,
-    WEEKLY_LOSS_LIMIT_PERCENT,
-    MONTHLY_LOSS_LIMIT_PERCENT,
-    TRADING_HOURS
-)
+from core.config.manager import config
 
 @dataclass
 class RiskReport():  # Optional data model
@@ -26,9 +20,9 @@ class RiskReport():  # Optional data model
 class RiskMonitor:
     def __init__(self):
         self.limits = {
-            PeriodType.DAILY: float(DAILY_LOSS_LIMIT_PERCENT),
-            PeriodType.WEEKLY: float(WEEKLY_LOSS_LIMIT_PERCENT),
-            PeriodType.MONTHLY: float(MONTHLY_LOSS_LIMIT_PERCENT)
+            PeriodType.DAILY: float(config.get("daily_loss_limit_percent", 2.0)),
+            PeriodType.WEEKLY: float(config.get("weekly_loss_limit_percent", 5.0)),
+            PeriodType.MONTHLY: float(config.get("monthly_loss_limit_percent", 10.0))
         }
         self.period_data = {
             PeriodType.DAILY: {"pnl": 0.0, "breached": False, "last_reset": None},
@@ -95,8 +89,7 @@ class RiskMonitor:
 
     def _is_after_close(self, dt: datetime) -> bool:
         """Check if current time is after market close"""
-        close_time = time(*[int(x) for x in TRADING_HOURS.split('-')[-1].split(':')])
-        return dt.time() > close_time
+        return False  # Placeholder for actual market close logic
 
     def get_pnl(self, period: PeriodType) -> float:
         """Get current PnL for specified period"""

@@ -52,8 +52,6 @@ class Config:
                     'name': brokerage['name'],
                     'token_url': brokerage['token_url'],
                     'api_endpoint': brokerage['api_endpoint'],
-                    'account_id': account['account_id'] if account else None,
-                    'account_name': account['name'] if account else None,
                     'refresh_token': brokerage['refresh_token']
                 }
         except Exception as e:

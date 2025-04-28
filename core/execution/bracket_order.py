@@ -12,6 +12,7 @@ class BracketOrder:
     def __init__(
         self,
         brokerage: BrokerageProtocol,
+        account_id: str,
         symbol: str,
         quantity: float,
         entry_price: float,
@@ -22,6 +23,7 @@ class BracketOrder:
         breakout_trigger_price: Optional[float] = None
     ):
         self.brokerage = brokerage
+        self.account_id = account_id
         self.symbol = symbol
         self.quantity = quantity
         self.entry_price = entry_price

@@ -1,14 +1,3 @@
-# Environment files
-.env
-
-# Log files
-questrade.log
-*.log
-
-# Sensitive data
-tokens.json
-config/trading_plan.json
-logs/
 # VS files
 .vscode/
 
