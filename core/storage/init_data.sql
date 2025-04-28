@@ -16,6 +16,10 @@ INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
 INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
 ('QUESTRADE', 'https://login.questrade.com/oauth2/token', 'https://api.questrade.com', 'B-mtz8jXuyscfPX0HNkNn0rZRg_xK5mC0');
 
+-- IBKR Brokerage
+INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
+('IBKR', 'https://api.ibkr.com/v1/api/oauth/token', 'https://api.ibkr.com/v1/api', '');
+
 -- Questrade Margin Account
 INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
 ('27348656', 
