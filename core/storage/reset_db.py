@@ -1,78 +1,81 @@
 # core/storage/reset_db.py
-import os
 import sqlite3
 from pathlib import Path
 from core.logger import logger
 
-def reset_database():
-    db_path = 'data/trading.db'
-    schema_path = Path(__file__).parent / 'schema.sql'
-    init_path = Path(__file__).parent / 'init_data.sql'
-    
+def print_message(message: str):
+    """Print visible message to console"""
+    print(f"*** {message} ***")
+
+def reset_database() -> bool:
+    """Reset the database with proper error handling and messaging."""
     try:
-        # Setup directory structure
-        Path('data').mkdir(exist_ok=True)
+        print_message("DATABASE RESET STARTED")
+        logger.info("Starting database reset process...")
+        db_path = Path("data/trading.db")
+        schema_path = Path("core/storage/schema.sql")
+        data_path = Path("core/storage/init_data.sql")
+        # Remove existing database
+        db_file = Path(db_path)
+        if db_file.exists():
+            db_file.unlink()
+            print_message("Removed existing database file")
+            logger.info("Removed existing database")
         
-        # Remove existing database if it exists
-        if Path(db_path).exists():
-            try:
-                os.remove(db_path)
-                logger.info("Removed existing database")
-            except Exception as e:
-                logger.error(f"Error removing old database: {e}")
-                return False
+        # Create new database
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
         
-        # Initialize new database
-        with sqlite3.connect(db_path) as conn:
-            conn.execute("PRAGMA foreign_keys = ON")
-            conn.execute("PRAGMA journal_mode = WAL")
-            
-            # Load schema in single transaction
-            try:
-                with open(schema_path) as f:
-                    schema_sql = f.read()
-                conn.executescript(schema_sql)
-                logger.info("Database schema created successfully")
-            except sqlite3.Error as e:
-                logger.critical(f"Schema creation failed: {e}")
-                return False
-            
-            # Verify tables were created
-            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-            logger.info(f"Created {len(tables)} tables")
-            
-            # Load initial data (if exists)
-            if init_path.exists():
-                try:
-                    with open(init_path) as f:
-                        init_sql = f.read()
-                    # Execute as script (auto-commits)
-                    conn.executescript(init_sql) 
-                    logger.info("Initial data loaded successfully")
-                except sqlite3.Error as e:
-                    logger.error(f"Initial data loading failed: {e}")
-                    # Continue even if init data fails
-            
-            # Verify basic data integrity
-            try:
-                test_query = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='config'")
-                if not test_query.fetchone():
-                    raise ValueError("Core tables not created")
-            except Exception as e:
-                logger.error(f"Database verification failed: {e}")
-                return False
-                
-        return True
+        # Load schema
+        print_message("Creating database schema")
+        with open(schema_path) as f:
+            conn.executescript(f.read())
+        print_message("Database schema created successfully")
+        logger.info("Database schema created successfully")
+        
+        # Verify tables
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [row[0] for row in cursor.fetchall()]
+        print_message(f"Created {len(tables)} tables")
+        logger.info(f"Created {len(tables)} tables: {', '.join(tables)}")
+        
+        # Load initial data
+        print_message("Loading initial data")
+        try:
+            with open(data_path) as f:
+                # Print each message from the SQL script
+                conn.set_trace_callback(lambda stmt: print(f"SQL: {stmt.strip()}") if "SELECT '" in stmt else None)
+                conn.executescript(f.read())
+            print_message("Initial data loaded successfully")
+            logger.info("Initial data loaded successfully")
+        except sqlite3.Error as e:
+            print_message(f"DATA LOADING FAILED: {e}")
+            logger.error(f"Initial data loading failed: {e}")
+            conn.rollback()
+            print_message("Continuing with database creation (some sample data may be missing)")
+        finally:
+            conn.commit()
+        
+        # Final verification
+        print_message("Running final verification")
+        try:
+            cursor = conn.execute("SELECT COUNT(*) FROM sqlite_master")
+            print_message(f"Database contains {cursor.fetchone()[0]} objects")
+            print_message("DATABASE RESET COMPLETED SUCCESSFULLY")
+            return True
+        except Exception as e:
+            print_message(f"VERIFICATION FAILED: {e}")
+            return False
         
     except Exception as e:
-        logger.critical(f"Unexpected error during database reset: {str(e)}")
+        print_message(f"DATABASE RESET FAILED: {e}")
+        logger.error(f"Database reset failed: {e}")
         return False
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 if __name__ == "__main__":
-    logger.info("Starting database reset process...")
-    if reset_database():
-        logger.info("Database reset completed successfully")
-        exit(0)
-    else:
-        logger.error("Database reset failed")
-        exit(1)
+    import sys    
+    success = reset_database()
+    sys.exit(0 if success else 1)

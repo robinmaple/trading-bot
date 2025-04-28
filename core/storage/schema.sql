@@ -1,4 +1,3 @@
-
 -- core/storage/schema.sql
 -- Fixed schema with proper SQLite syntax
 
@@ -65,4 +64,32 @@ CREATE TABLE IF NOT EXISTS planned_trades (
     expiry_date TEXT,
     status TEXT CHECK(status IN ('pending', 'ready', 'executed', 'canceled')) DEFAULT 'pending',
     FOREIGN KEY (plan_id) REFERENCES plans(plan_id) ON DELETE CASCADE
+);
+
+-- Executed Trades
+CREATE TABLE IF NOT EXISTS executed_trades (
+    trade_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    planned_trade_id INTEGER NOT NULL,
+    actual_entry_price REAL NOT NULL,
+    actual_quantity INTEGER NOT NULL,
+    fees REAL DEFAULT 0,
+    status TEXT CHECK(status IN ('filled', 'partial', 'canceled')) NOT NULL,
+    execution_time TIMESTAMP NOT NULL,
+    close_time TIMESTAMP,
+    close_reason TEXT CHECK(close_reason IN ('SL', 'TP', 'EOD', 'MANUAL')),
+    pnl REAL,
+    FOREIGN KEY (planned_trade_id) REFERENCES planned_trades(trade_id)
+);
+
+-- Positions
+CREATE TABLE IF NOT EXISTS positions (
+    account_id TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    entry_price REAL NOT NULL,
+    entry_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    planned_trade_id INTEGER,
+    PRIMARY KEY (account_id, symbol),
+    FOREIGN KEY (account_id) REFERENCES accounts(account_id),
+    FOREIGN KEY (planned_trade_id) REFERENCES planned_trades(trade_id)
 );

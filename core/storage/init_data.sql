@@ -1,7 +1,20 @@
 -- core/storage/init_data.sql
 BEGIN TRANSACTION;
 
--- Global Config
+-- Print start message
+SELECT 'Starting data initialization' AS message;
+
+-- Clear existing data (if needed)
+SELECT 'Clearing existing data' AS message;
+DELETE FROM positions;
+DELETE FROM planned_trades;
+DELETE FROM plans;
+DELETE FROM accounts;
+DELETE FROM brokerages;
+DELETE FROM config;
+
+-- Insert Configuration
+SELECT 'Inserting configuration' AS message;
 INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
 ('dry_run', 'TRUE', 'bool', 'Test mode without real trades'),
 ('risk_of_capital', '0.01', 'float', 'Max % of capital to risk per trade (0.01 = 1%)'),
@@ -12,52 +25,58 @@ INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
 ('monthly_loss_limit_percent', '10', 'float', 'Max monthly loss before pausing (10%)'),
 ('close_trades_buffer_minutes', '5', 'int', 'Minutes before market close to exit trades');
 
--- Questrade Brokerage
+-- Insert Brokerages
+SELECT 'Inserting brokerages' AS message;
 INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
-('QUESTRADE', 'https://login.questrade.com/oauth2/token', 'https://api.questrade.com', 'B-mtz8jXuyscfPX0HNkNn0rZRg_xK5mC0');
-
--- IBKR Brokerage
-INSERT OR REPLACE INTO brokerages (name, token_url, api_endpoint, refresh_token) VALUES
+('QUESTRADE', 'https://login.questrade.com/oauth2/token', 'https://api.questrade.com', 'B-mtz8jXuyscfPX0HNkNn0rZRg_xK5mC0'),
 ('IBKR', 'https://api.ibkr.com/v1/api/oauth/token', 'https://api.ibkr.com/v1/api', '');
 
--- Questrade Margin Account
+-- Insert Accounts
+SELECT 'Inserting accounts' AS message;
 INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
 ('27348656', 
  (SELECT id FROM brokerages WHERE name = 'QUESTRADE'), 
  'MARGIN');
 
--- Add sample trading plan
-
--- Insert the main plan with account_id
+-- Insert Plan
+SELECT 'Inserting trading plan' AS message;
 INSERT INTO plans (account_id, upload_time) 
-VALUES ('27348656', datetime('now'));  -- Account ID at plan level
+VALUES ('27348656', datetime('now'));
 
--- Get the last inserted plan_id
--- Insert trades without account_id (inherited from plan)
+-- Insert Planned Trades
+SELECT 'Inserting planned trades' AS message;
 INSERT INTO planned_trades (
     plan_id,
     symbol,
     entry_price,
     stop_loss_price,
     expiry_date
-) VALUES 
-    -- AAPL trade (using last_insert_rowid() for plan_id)
-    (
-        last_insert_rowid(),
-        'AAPL',
-        205.0,
-        199.99,
-        date('now', '+7 days')  -- Expires 7 days from now
-    ),
-    -- TSLA trade (same plan_id since they're part of the same plan)
-    (
-        last_insert_rowid(),
-        'TSLA',
-        255.0,
-        249.59,
-        date('now', '+7 days')  -- Expires 7 days from now
-    );
+)
+SELECT 
+    last_insert_rowid(),
+    'AAPL',
+    205.0,
+    199.99,
+    date('now', '+7 days')
+UNION ALL
+SELECT 
+    last_insert_rowid(),
+    'TSLA',
+    255.0,
+    249.59,
+    date('now', '+7 days');
 
--- Commit the transaction
+-- Verify data was inserted
+SELECT 'Verifying data' AS message;
+SELECT 'Config rows:' AS label, COUNT(*) AS count FROM config
+UNION ALL
+SELECT 'Brokerages:', COUNT(*) FROM brokerages
+UNION ALL
+SELECT 'Accounts:', COUNT(*) FROM accounts
+UNION ALL
+SELECT 'Plans:', COUNT(*) FROM plans
+UNION ALL
+SELECT 'Planned Trades:', COUNT(*) FROM planned_trades;
 
 COMMIT;
+SELECT 'Data initialization completed successfully' AS message;
