@@ -14,28 +14,20 @@ class IBKRClient(PriceProtocol, OrderProtocol):
         self._session = None  # Will hold authenticated IBKR API session
 
     # --- PriceProtocol Implementation ---
-    async def get_price(self, symbol: str) -> float:
-        """Fetches the current market price for a symbol."""
-        if not self._session:
-            self._session = self.auth.create_session()
-
-        url = f"{self.auth.api_server}iserver/marketdata/snapshot?conids={self._get_conid(symbol)}&fields=31"
-        response = self._session.get(url)
-        logger.info(f"Quote response: {response.status_code} - {response.text}")
-
-        if response.status_code != 200:
-            raise RuntimeError(f"Failed to fetch quote for {symbol}")
-
-        quote_data = response.json()
-        if not quote_data:
-            raise RuntimeError(f"No price data available for {symbol}")
-
-        # Field 31 is last price in IBKR's system
-        price = quote_data[0].get("31")
-        if not price:
-            raise RuntimeError(f"No price available for {symbol}")
-
-        return float(price)
+    async def get_price(self, symbol: str) -> dict:
+        """Returns market data with depth for IBKR"""
+        conid = self._get_conid(symbol)
+        url = f"{self.api_server}iserver/marketdata/snapshot?conids={conid}&fields=84,86,31"
+        # Fields: 31=Last, 84=Bid, 86=Ask
+        
+        response = await self._session.get(url)
+        data = response.json()[0]
+        
+        return {
+            'last': float(data['31']),
+            'bid': float(data['84']),
+            'ask': float(data['86'])
+        }    
     
     def _get_conid(self, symbol: str) -> str:
         """Get IBKR's contract ID (conid) for a symbol."""

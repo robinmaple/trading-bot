@@ -4,12 +4,12 @@ from core.logger import logger
 import requests, time
 
 class IBKRAuth(BaseBrokerageAuth):
-    def __init__(self, db=None, **kwargs):
-        self.brokerage_name = 'IBKR'
+    def __init__(self, db=None, brokerage_name='IBKR', **kwargs):
+        self.brokerage_name = brokerage_name  # Use parameter instead of hardcoding
         super().__init__(db, **kwargs)
         
         if db:
-            config = self._load_db_config(db, self.brokerage_name)
+            config = kwargs if not db else self._config
             self.token_url = config['token_url']
             self.client_id = config['client_id']
             self.client_secret = config['client_secret']

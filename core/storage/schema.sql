@@ -108,3 +108,12 @@ CREATE TABLE IF NOT EXISTS encryption_keys (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_used TIMESTAMP
 );
+
+-- Historical Data Download
+CREATE TABLE IF NOT EXISTS symbols (
+    symbol TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    country TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT 1,
+    last_updated TIMESTAMP
+);
