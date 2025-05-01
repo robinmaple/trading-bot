@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     brokerage_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     bp_override REAL,
-    risk_per_trade REAL DEFAULT 0.01,
     is_active BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (brokerage_id) REFERENCES brokerages(id) ON DELETE CASCADE,
@@ -54,7 +53,7 @@ CREATE TABLE IF NOT EXISTS plans (
     description TEXT,
     upload_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expiry_time DATETIME,
-    status TEXT CHECK(status IN ('pending', 'active', 'completed', 'canceled')) DEFAULT 'pending',
+    status TEXT CHECK(status IN ('pending', 'active', 'completed', 'canceled')) DEFAULT 'active',
     FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
 );
 
@@ -66,6 +65,9 @@ CREATE TABLE IF NOT EXISTS planned_trades (
     entry_price REAL,
     stop_loss_price REAL,
     take_profit_price REAL,
+    risk_per_trade REAL,
+    profit_to_loss_ratio REAL,
+    available_quantity_ratio REAL,
     quantity INTEGER,
     expiry_date TEXT,
     status TEXT CHECK(status IN ('pending', 'ready', 'executed', 'canceled')) DEFAULT 'pending',

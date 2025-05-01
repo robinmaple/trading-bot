@@ -14,6 +14,7 @@ from core.brokerages.protocol import OrderProtocol, PriceProtocol
 from core.config.manager import config
 from core.storage.db import TradingDB
 from core.brokerages.questrade.auth import QuestradeAuth
+from core.config.manager import config
 
 class TradingManager:
     def __init__(
@@ -27,7 +28,6 @@ class TradingManager:
         self.db = db or TradingDB()
 
         # Configuration setup
-        from core.config.manager import config
         self.config = config
 
         # Runtime properties
@@ -45,8 +45,8 @@ class TradingManager:
         return self.config.get('dry_run')
 
     @property
-    def risk_of_capital(self) -> float:
-        return self.config.get('risk_of_capital')
+    def risk_per_trade(self) -> float:
+        return self.config.get('risk_per_trade')
 
     @property
     def available_quantity_ratio(self) -> float:
@@ -230,7 +230,7 @@ class TradingManager:
             buying_power=self.remaining_bp,  # Use remaining capital
             entry_price=bracket.entry_price,
             stop_loss_price=bracket.stop_loss_price,
-            risk_of_capital=self.config.risk_of_capital,
+            risk_per_trade=self.config.risk_per_trade,
             available_quantity_ratio=self.config.available_quantity_ratio
         )
 
@@ -331,38 +331,6 @@ class TradingManager:
     def _should_trigger(self, plan: dict, price: float) -> bool:
         """Check plan-specific conditions"""
         return True  # Placeholder for real logic
-    
-    def adjust_quantity_for_capital(
-        self,
-        buying_power: float,
-        entry_price: float,
-        stop_loss_price: float,
-        risk_of_capital: float,
-        available_quantity_ratio: float
-    ) -> int:
-        """
-        Adjust quantity based on risk and available buying power.
-        """
-        if entry_price <= stop_loss_price:
-            return 0  # Invalid setup
-
-        # Calculate risk-based quantity
-        risk_per_share = entry_price - stop_loss_price
-        max_risk_amount = buying_power * risk_of_capital
-        ideal_quantity = int(max_risk_amount / risk_per_share)
-
-        if ideal_quantity <= 0:
-            return 0
-
-        # Determine max quantity by buying power
-        max_affordable_quantity = int(buying_power / entry_price)
-
-        quantity = min(ideal_quantity, max_affordable_quantity)
-
-        if quantity < math.ceil(ideal_quantity * available_quantity_ratio):
-            return 0
-
-        return quantity
     
     def log_executed_order(self, plan: dict, bracket: BracketOrder, dry_run: bool):
         """Logs detailed execution info to JSON files"""
@@ -597,111 +565,6 @@ class TradingManager:
         
         return plans
     
-    async def _process_plans(self):
-        """Process trading plans with market status validation"""
-        async with self._capital_lock:
-            # Validate account
-            account_id = self.config.account_id
-            if not account_id:
-                logger.error("No account ID configured")
-                return
-
-            # 1. Get buying power
-            try:
-                total_bp = await self.order_client.get_buying_power(account_id)
-                logger.info(f"Buying power: {total_bp}")
-            except Exception as e:
-                logger.warning(f"BP API failed: {e}, using DB fallback")
-                with self.db._get_conn() as conn:
-                    total_bp = conn.execute(
-                        "SELECT bp_override FROM accounts WHERE account_id = ?",
-                        (account_id,)
-                    ).fetchone()[0] or 0
-
-            # 2. Calculate used BP from positions
-            with self.db._get_conn() as conn:
-                used_bp = conn.execute("""
-                    SELECT COALESCE(SUM(entry_price * quantity), 0)
-                    FROM positions
-                    WHERE account_id = ?
-                """, (account_id,)).fetchone()[0]
-            
-            self.remaining_bp = total_bp - used_bp
-
-            # 3. Check market status before proceeding
-            if not await self._should_trade():
-                logger.info("Market conditions not suitable for trading")
-                return
-
-            # 4. Process active plans from DB
-            with self.db._get_conn() as conn:
-                active_plans = conn.execute("""
-                    SELECT pt.planned_trade_id, pt.symbol, pt.entry_price, 
-                        pt.stop_loss_price, pt.expiry_date
-                    FROM planned_trades pt
-                    LEFT JOIN executed_trades et ON pt.planned_trade_id = et.planned_trade_id
-                    WHERE pt.account_id = ?
-                    AND pt.expiry_date >= DATE('now')
-                    AND (et.status IS NULL OR et.status != 'filled')
-                """, (account_id,)).fetchall()
-
-                for plan in active_plans:
-                    symbol = plan['symbol']
-                    try:
-                        logger.info(f"Processing {symbol}")
-
-                        # Validate required prices
-                        if None in [plan['entry_price'], plan['stop_loss_price']]:
-                            logger.error(f"Missing prices for {symbol}")
-                            continue
-
-                        # Get market data
-                        quote = await self._get_valid_quote(symbol)
-                        if not quote:
-                            continue
-
-                        # Convert and validate prices
-                        try:
-                            entry_price = float(plan['entry_price'])
-                            stop_loss = float(plan['stop_loss_price'])
-                            current_price = float(quote['lastTradePrice'])
-                        except (TypeError, ValueError) as e:
-                            logger.error(f"Price conversion failed for {symbol}: {e}")
-                            continue
-
-                        if entry_price <= stop_loss:
-                            logger.error(f"Invalid prices for {symbol}: entry {entry_price} <= stop {stop_loss}")
-                            continue
-
-                        # Create and execute order
-                        legacy_plan = {
-                            'symbol': symbol,
-                            'entry': entry_price,
-                            'stop_loss': stop_loss,
-                            'planned_trade_id': plan['planned_trade_id']
-                        }
-
-                        try:
-                            bracket = BracketOrder.from_plan(legacy_plan, current_price)
-                            bracket.quantity = self._calculate_safe_quantity(bracket)
-                        except Exception as e:
-                            logger.error(f"Bracket creation failed for {symbol}: {e}")
-                            continue
-
-                        # BP check
-                        required_bp = bracket.entry_price * bracket.quantity
-                        if self.remaining_bp < required_bp:
-                            logger.warning(f"Insufficient BP for {symbol}")
-                            continue
-
-                        if await self._execute_plan_with_db(legacy_plan, bracket):
-                            self.remaining_bp -= required_bp
-                            logger.info(f"Executed {symbol}")
-
-                    except Exception as e:
-                        logger.error(f"Plan failed for {symbol}: {str(e)}")
-                        continue
-
     async def _get_valid_quote(self, symbol: str, max_retries: int = 3) -> Optional[dict]:
         """Get valid market quote with retries"""
         for attempt in range(max_retries):
@@ -768,28 +631,168 @@ class TradingManager:
         
         return True    
     
+    async def _process_plans(self):
+        """Process trading plans with market status validation"""
+        async with self._capital_lock:
+            # Validate account
+            account_id = self.config.account_id
+            if not account_id:
+                logger.error("No account ID configured")
+                return
+
+            # 1. Get buying power
+            try:
+                total_bp = await self.order_client.get_buying_power(account_id)
+                logger.info(f"Buying power: {total_bp}")
+            except Exception as e:
+                logger.warning(f"BP API failed: {e}, using DB fallback")
+                with self.db._get_conn() as conn:
+                    total_bp = conn.execute(
+                        "SELECT bp_override FROM accounts WHERE account_id = ?",
+                        (account_id,)
+                    ).fetchone()[0] or 0
+
+            # 2. Calculate used BP from positions
+            with self.db._get_conn() as conn:
+                used_bp = conn.execute("""
+                    SELECT COALESCE(SUM(entry_price * quantity), 0)
+                    FROM positions
+                    WHERE account_id = ?
+                """, (account_id,)).fetchone()[0]
+            
+            self.remaining_bp = total_bp - used_bp
+
+            # 3. Check market status before proceeding
+            if not await self._should_trade():
+                logger.info("Market conditions not suitable for trading")
+                return
+
+            # 4. Process active plans from DB with risk parameters
+            with self.db._get_conn() as conn:
+                active_plans = conn.execute("""
+                    SELECT 
+                        pt.planned_trade_id, 
+                        pt.symbol, 
+                        pt.entry_price, 
+                        pt.stop_loss_price, 
+                        pt.expiry_date,
+                        pt.risk_per_trade,
+                        pt.profit_to_loss_ratio,
+                        pt.available_quantity_ratio
+                    FROM planned_trades pt
+                    LEFT JOIN executed_trades et ON pt.planned_trade_id = et.planned_trade_id
+                    WHERE pt.account_id = ?
+                    AND pt.expiry_date >= DATE('now')
+                    AND (et.status IS NULL OR et.status != 'filled')
+                """, (account_id,)).fetchall()
+
+                for plan in active_plans:
+                    symbol = plan['symbol']
+                    try:
+                        logger.info(f"Processing {symbol}")
+
+                        # Validate required prices
+                        if None in [plan['entry_price'], plan['stop_loss_price']]:
+                            logger.error(f"Missing prices for {symbol}")
+                            continue
+
+                        # Get market data
+                        quote = await self._get_valid_quote(symbol)
+                        if not quote:
+                            continue
+
+                        # Convert and validate prices
+                        try:
+                            entry_price = float(plan['entry_price'])
+                            stop_loss = float(plan['stop_loss_price'])
+                            current_price = float(quote['lastTradePrice'])
+                        except (TypeError, ValueError) as e:
+                            logger.error(f"Price conversion failed for {symbol}: {e}")
+                            continue
+
+                        if entry_price <= stop_loss:
+                            logger.error(f"Invalid prices for {symbol}: entry {entry_price} <= stop {stop_loss}")
+                            continue
+
+                        # Create and execute order
+                        legacy_plan = {
+                            'symbol': symbol,
+                            'entry': entry_price,
+                            'stop_loss': stop_loss,
+                            'planned_trade_id': plan['planned_trade_id']
+                        }
+
+                        try:
+                            bracket = BracketOrder.from_plan(legacy_plan, current_price)
+                            
+                            # Calculate quantity using trade-specific risk parameters
+                            bracket.quantity = self.adjust_quantity_for_capital(
+                                buying_power=self.remaining_bp,
+                                entry_price=bracket.entry_price,
+                                stop_loss_price=bracket.stop_loss_price,
+                                risk_per_trade=plan.get('risk_per_trade', 0.01),  # Default to 1% if not set
+                                available_quantity_ratio=plan.get('available_quantity_ratio', 0.8)  # Default to 80%
+                            )
+                        except Exception as e:
+                            logger.error(f"Bracket creation failed for {symbol}: {e}")
+                            continue
+
+                        # BP check
+                        required_bp = bracket.entry_price * bracket.quantity
+                        if self.remaining_bp < required_bp:
+                            logger.warning(f"Insufficient BP for {symbol}")
+                            continue
+
+                        if await self._execute_plan_with_db(legacy_plan, bracket):
+                            self.remaining_bp -= required_bp
+                            logger.info(f"Executed {symbol}")
+
+                    except Exception as e:
+                        logger.error(f"Plan failed for {symbol}: {str(e)}")
+                        continue
+
+    def adjust_quantity_for_capital(
+        self,
+        buying_power: float,
+        entry_price: float,
+        stop_loss_price: float,
+        risk_per_trade: float = 0.005,
+        available_quantity_ratio: float = 0.8
+    ) -> int:
+        """
+        Adjust quantity based on risk and available buying power.
+        Now uses parameters passed in rather than config values.
+        """
+        if entry_price <= stop_loss_price:
+            return 0  # Invalid setup
+
+        # Calculate risk-based quantity
+        risk_per_share = entry_price - stop_loss_price
+        max_risk_amount = buying_power * risk_per_trade
+        ideal_quantity = int(max_risk_amount / risk_per_share)
+
+        if ideal_quantity <= 0:
+            return 0
+
+        # Determine max quantity by buying power
+        max_affordable_quantity = int(buying_power / entry_price)
+
+        quantity = min(ideal_quantity, max_affordable_quantity)
+
+        # Apply available quantity ratio
+        min_acceptable_quantity = math.ceil(ideal_quantity * available_quantity_ratio)
+        if quantity < min_acceptable_quantity:
+            return 0
+
+        return quantity
+
     async def validate_config(self):
-        """Verify all required config values are set and valid"""
+        """Updated config validation without risk parameters"""
         required_config = {
             'dry_run': {
                 'type': bool,
                 'default': False,
                 'validator': lambda x: isinstance(x, bool)
-            },
-            'risk_of_capital': {
-                'type': float,
-                'default': 0.01,
-                'validator': lambda x: 0 < x <= 0.1  # 0-10% risk
-            },
-            'profit_to_loss_ratio': {
-                'type': float, 
-                'default': 2.0,
-                'validator': lambda x: x >= 1.0  # At least 1:1 ratio
-            },
-            'available_quantity_ratio': {
-                'type': float,
-                'default': 0.5,
-                'validator': lambda x: 0 < x <= 1.0
             },
             'daily_loss_limit_percent': {
                 'type': float,

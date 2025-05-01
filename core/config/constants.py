@@ -7,24 +7,6 @@ CONFIG_SPECS = {
         default=False,
         description="Whether to run in test mode without real trades"
     ),
-    'risk_of_capital': ConfigSpec(
-        type=float,
-        default=0.01,
-        validator=lambda x: 0 < x <= 0.1,
-        description="Max percentage of capital to risk per trade (0.01 = 1%)"
-    ),
-    'profit_to_loss_ratio': ConfigSpec(
-        type=float,
-        default=2.0,
-        validator=lambda x: x >= 1.0,
-        description="Minimum profit target as multiple of risk"
-    ),
-    'available_quantity_ratio': ConfigSpec(
-        type=float,
-        default=0.8,
-        validator=lambda x: 0 < x <= 1.0,
-        description="Max percentage of calculated position size to take"
-    ),
     'daily_loss_limit_percent': ConfigSpec(
         type=float,
         default=2.0,

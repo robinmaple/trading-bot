@@ -17,9 +17,6 @@ DELETE FROM config;
 SELECT 'Inserting configuration' AS message;
 INSERT OR REPLACE INTO config (key, value, value_type, description) VALUES
 ('dry_run', 'TRUE', 'bool', 'Test mode without real trades'),
-('risk_of_capital', '0.01', 'float', 'Max % of capital to risk per trade (0.01 = 1%)'),
-('profit_to_loss_ratio', '2', 'float', 'Minimum profit target as multiple of risk'),
-('available_quantity_ratio', '0.8', 'float', 'Max % of calculated position size to take'),
 ('daily_loss_limit_percent', '2', 'float', 'Max daily loss before pausing (2%)'),
 ('weekly_loss_limit_percent', '5', 'float', 'Max weekly loss before pausing (5%)'),
 ('monthly_loss_limit_percent', '10', 'float', 'Max monthly loss before pausing (10%)'),
@@ -69,29 +66,6 @@ INSERT OR REPLACE INTO accounts (account_id, brokerage_id, name) VALUES
 SELECT 'Inserting trading plan' AS message;
 INSERT INTO plans (account_id, upload_time) 
 VALUES ('27348656', datetime('now'));
-
--- Insert Planned Trades
-SELECT 'Inserting planned trades' AS message;
-INSERT INTO planned_trades (
-    plan_id,
-    symbol,
-    entry_price,
-    stop_loss_price,
-    expiry_date
-)
-SELECT 
-    last_insert_rowid(),
-    'AAPL',
-    205.0,
-    199.99,
-    date('now', '+7 days')
-UNION ALL
-SELECT 
-    last_insert_rowid(),
-    'TSLA',
-    255.0,
-    249.59,
-    date('now', '+7 days');
 
 -- Verify data was inserted
 SELECT 'Verifying data' AS message;
