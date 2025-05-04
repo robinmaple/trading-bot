@@ -23,8 +23,10 @@ CREATE TABLE IF NOT EXISTS brokerages (
     api_key TEXT,          -- For Alpaca, etc.
     refresh_token TEXT,    -- For Questrade, TD Ameritrade, etc.
     access_token TEXT,
+    username TEXT,
+    password TEXT, 
     -- Metadata
-    auth_type TEXT NOT NULL CHECK(auth_type IN ('client_credentials', 'authorization_code', 'api_key')),
+    auth_type TEXT NOT NULL CHECK(auth_type IN ('client_credentials', 'authorization_code', 'api_key','username_password')),
     token_expiry TIMESTAMP,
     last_token_update TIMESTAMP,
     credentials_encrypted BOOLEAN DEFAULT 1,

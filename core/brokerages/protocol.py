@@ -1,10 +1,10 @@
 from typing import Protocol, runtime_checkable
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Dict
 from core.models import OrderStatus
 from core.orders.bracket import BracketOrder
-
+from typing import Optional, Dict, Union
+from decimal import Decimal
 
 @runtime_checkable
 class PriceProtocol(Protocol):
@@ -66,16 +66,32 @@ class BrokerageProtocol(Protocol):
         return False  # Default to False, brokerages can override
 
 
-# Shared data models (minimal, extend as needed)
 @dataclass
 class OrderRequest:
+    """Request to place an order with a brokerage"""
     symbol: str
     quantity: float
-    order_type: str  # "limit", "market", etc.
+    order_type: str  # "market", "limit", "stop", "stop_limit"
+    limit_price: Optional[Union[float, Decimal]] = None
+    stop_price: Optional[Union[float, Decimal]] = None
+    
+    def __post_init__(self):
+        # Validate order type and price requirements
+        if self.order_type.lower() not in ["market", "limit", "stop", "stop_limit"]:
+            raise ValueError(f"Invalid order type: {self.order_type}")
+            
+        if "limit" in self.order_type.lower() and self.limit_price is None:
+            raise ValueError("Limit price required for limit orders")
+            
+        if "stop" in self.order_type.lower() and self.stop_price is None:
+            raise ValueError("Stop price required for stop orders")
 
-
-@dataclass
+@dataclass 
 class FillReport:
+    """Result of an order execution attempt"""
     order_id: str
-    filled_at: float  # Price
-    status: str  # "filled", "rejected", etc.
+    status: str  # "submitted", "filled", "rejected", "cancelled"
+    filled_at: float = 0.0  # Timestamp of fill
+    filled_price: Optional[float] = None  # Average fill price
+    filled_quantity: Optional[float] = None  # Filled amount
+    message: Optional[str] = None  # Rejection reason if applicable
