@@ -21,23 +21,28 @@ async def main():
     
     # 2. Test market data
     client = IBKRClient(auth)
-    symbol = "AAPL"
-    price = await client.get_price(symbol)
-    logger.info(f"📊 {symbol} price: {price}")
-    
-    # 3. Test dry-run order submission
-    if True:  # Set DRY_RUN=False in config to test real orders
-        order = {
-            "symbol": symbol,
-            "quantity": 1,
-            "order_type": "limit",
-            "limit_price": round(price * 0.95, 2)  # 5% below market
-        }
-        try:
-            report = await client.submit_order(order)
-            logger.info(f"🟢 Dry-run order submitted: {report}")
-        except Exception as e:
-            logger.error(f"🔴 Order failed: {e}")
+    # Test CONID lookup
+    conid = await client._get_conid('BIDU')
+    logger.info(f"BIDU CONID: {conid}")
 
+    # Test price fetching
+    try:
+        price = await client.get_price('BIDU')
+        logger.info(f"BIDU Price: {price}")
+    except Exception as e:
+        logger.error(f"Price check failed: {str(e)}")
+
+    # Test order submission
+    order = {
+        "symbol": "BIDU",
+        "quantity": 10,
+        "order_type": "market"
+    }
+    try:
+        result = await client.submit_order(order)
+        logger.info(f"Order Result: {result}")
+    except Exception as e:
+        logger.error(f"Order failed: {str(e)}")
+        
 if __name__ == "__main__":
     asyncio.run(main())
